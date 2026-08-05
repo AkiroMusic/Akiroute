@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Akiroute.Views.Controls.StatusHeaderControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <!--
+            One-click start/stop pill button. Defaults to the accent fill (the
+            "启动" call to action); the header's Running visual state flips it
+            to a subtle secondary fill with a stop glyph. Content (glyph, text,
+            progress ring) inherits Foreground from the button template.
+        -->
+        <Style x:Key="TogglePillButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="MinWidth" Value="104" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:0.12" />
+                                    </VisualStateGroup.Transitions>
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource AccentFillColorSecondaryBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <VisualState.Setters>
+                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource AccentFillColorTertiaryBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled">
+                                        <VisualState.Setters>
+                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource ControlFillColorDisabledBrush}" />
+                                            <Setter Target="ButtonRoot.Opacity" Value="0.7" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Border
+                                x:Name="ButtonRoot"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                                <ContentPresenter
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Content}"
+                                    Foreground="{TemplateBinding Foreground}" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!--
+        Top status bar: app identity + status text on the left, the one-click
+        start/stop toggle on the right. All visuals are driven from the
+        code-behind dependency properties; nothing here touches a view model.
+    -->
+    <Border
+        Height="56"
+        Padding="16,0"
+        Background="{ThemeResource LayerFillColorDefaultBrush}"
+        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="0,0,0,1">
+
+        <Grid ColumnSpacing="12">
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="ToggleStates">
+                    <VisualStateGroup.Transitions>
+                        <VisualTransition GeneratedDuration="0:0:0.15" />
+                    </VisualStateGroup.Transitions>
+                    <VisualState x:Name="Stopped" />
+                    <VisualState x:Name="Running">
+                        <VisualState.Storyboard>
+                            <!-- Soft pulsing green dot next to the stop button. -->
+                            <Storyboard>
+                                <DoubleAnimation
+                                    Storyboard.TargetName="DotIndicator"
+                                    Storyboard.TargetProperty="Opacity"
+                                    From="1.0"
+                                    To="0.25"
+                                    Duration="0:0:0.8"
+                                    AutoReverse="True"
+                                    RepeatBehavior="Forever" />
+                            </Storyboard>
+                        </VisualState.Storyboard>
+                        <VisualState.Setters>
+                            <Setter Target="ToggleButton.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                            <Setter Target="ToggleButton.Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+                <VisualStateGroup x:Name="BusyStates">
+                    <VisualState x:Name="Idle" />
+                    <VisualState x:Name="Busy">
+                        <VisualState.Setters>
+                            <Setter Target="ToggleButton.IsEnabled" Value="False" />
+                            <Setter Target="ToggleGlyph.Visibility" Value="Collapsed" />
+                            <Setter Target="ToggleProgress.Visibility" Value="Visible" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- App glyph. -->
+            <Grid
+                Grid.Column="0"
+                Width="28"
+                Height="28"
+                VerticalAlignment="Center"
+                CornerRadius="6"
+                Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                <FontIcon
+                    Glyph="&#xE7B8;"
+                    FontSize="14"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- App title. -->
+            <TextBlock
+                x:Name="TitleText"
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Text="Akiroute"
+                FontSize="15"
+                FontWeight="SemiBold"
+                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+            <!-- Status / error text, truncating when the window is narrow. -->
+            <StackPanel
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                Spacing="2">
+                <TextBlock
+                    x:Name="StatusText"
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextTrimming="CharacterEllipsis" />
+                <TextBlock
+                    x:Name="ErrorText"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                    TextTrimming="CharacterEllipsis"
+                    Visibility="Collapsed" />
+            </StackPanel>
+
+            <!-- Toggle button with a running dot indicator. -->
+            <Grid
+                Grid.Column="3"
+                VerticalAlignment="Center"
+                ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Ellipse
+                    x:Name="DotIndicator"
+                    Grid.Column="0"
+                    Width="8"
+                    Height="8"
+                    VerticalAlignment="Center"
+                    Fill="{ThemeResource SystemFillColorSuccessBrush}"
+                    Visibility="Collapsed" />
+
+                <Button
+                    x:Name="ToggleButton"
+                    Grid.Column="1"
+                    Style="{StaticResource TogglePillButtonStyle}"
+                    Click="ToggleButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ProgressRing
+                            x:Name="ToggleProgress"
+                            Width="16"
+                            Height="16"
+                            IsActive="True"
+                            Visibility="Collapsed" />
+                        <FontIcon
+                            x:Name="ToggleGlyph"
+                            Glyph="&#xE768;"
+                            FontSize="14" />
+                        <TextBlock
+                            x:Name="ToggleText"
+                            Text="启动"
+                            FontSize="14"
+                            FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

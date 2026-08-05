@@ -1,0 +1,26 @@
+# Build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Akiroute engine assets (downloaded, not committed)
+Akiroute/Assets/engine/
+Akiroute/Assets/rules/
+
+# Code intelligence index
+.codegraph/
+
+# Internal dev tooling / state (not part of the deliverable)
+.omo/
+Reference-XrayUI/
+Akiroute-Plan.md
+
+# Local tooling
+tools/*.zip
+tools/*.tmp
+
+# OS
+Thumbs.db
+Desktop.ini

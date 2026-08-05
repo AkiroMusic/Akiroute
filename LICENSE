@@ -1,0 +1,75 @@
+# Akiroute Non-Commercial Educational License (专有 / Proprietary)
+
+Copyright © 2026 Akiro. All rights reserved.
+
+> **中文摘要 (Chinese Summary)**: 本软件为 **Akiro** 的专有作品，**保留所有权利**。
+> 本软件仅用于**个人学习、学术研究与技术交流**。**严禁**任何商业使用、盈利、
+> 再分发、复制、修改后发布或用于生产环境。
+
+---
+
+## English (Authoritative)
+
+Permission is hereby granted, free of charge, to **any person obtaining a copy of
+this software solely for personal learning, academic research, and technical
+communication** ("the Licensee"), to **read and study** the software source code,
+and to **run the software locally for non-commercial purposes**, subject to the
+following conditions:
+
+### 1. Permitted Use (仅限以下用途)
+
+- Personal learning and understanding of the source code.
+- Academic research and technical exchange.
+- Non-commercial, local evaluation and testing of the software.
+
+### 2. Prohibited Use (禁止以下行为)
+
+The Licensee **may not**, without the prior written permission of the copyright
+holder **Akiro**:
+
+- Use the software, in whole or in part, for any **commercial purpose** or for
+  profit, directly or indirectly.
+- **Redistribute, publish, host, or sublicense** the software, in source or
+  binary form, to any third party.
+- **Copy, modify, merge, or derive** works from the software and release them
+  under any license, whether open-source or proprietary.
+- Use the software to operate a **public proxy service** or any service offered
+  to the public.
+- Remove, alter, or obscure any copyright, trademark, or license notices.
+
+### 3. No Warranty (无担保)
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+### 4. Legal Disclaimer (法律免责)
+
+This project is provided **for learning and communication purposes only**. The
+author assumes **no responsibility** for any direct or indirect consequences
+arising from the use of this software. The user shall be solely responsible for
+complying with all applicable local laws and regulations. **Proxy-related
+technologies may be restricted in certain jurisdictions; please verify and
+comply with your local laws before use.**
+
+---
+
+## 中文 (Chinese Translation, for reference)
+
+**第 1 条 许可用途**：仅允许将本软件用于个人学习、学术研究与技术交流，以及
+非商业的本地运行测试。
+
+**第 2 条 禁止行为**：未经版权人 **Akiro** 书面许可，不得将本软件（全部或
+部分）用于任何商业用途或牟利；不得向任何第三方再分发、发布、托管或再许可；
+不得复制、修改、衍生并发布本软件（无论以何种许可证）；不得使用本软件提供
+面向公众的代理服务；不得移除或篡改版权声明。
+
+**第 3 条 无担保**：本软件按"现状"提供，不附带任何明示或暗示的担保。作者
+与版权持有人不对任何因使用本软件而产生的索赔、损害或责任负责。
+
+**第 4 条 法律免责**：本项目仅供学习与交流使用，作者不对使用本软件产生的
+任何直接或间接后果承担责任。使用者须自行遵守所在地法律法规。**代理相关
+技术在某些司法辖区可能受到限制，使用前请自行核实并遵守当地法律。**

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Akiroute.Tests/Akiroute.Tests.csproj" />
+  <Project Path="Akiroute/Akiroute.csproj" />
+</Solution>

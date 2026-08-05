@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Akiroute.Views.Controls.ProcessItemControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <!--
+            Segment-style radio button: a rounded pill that fills with the accent
+            brush when checked. PointerOver / Pressed / Checked states are managed
+            automatically by the RadioButton control (CommonStates / CheckStates).
+        -->
+        <Style x:Key="SegmentRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Margin" Value="2" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border
+                            x:Name="SegmentRoot"
+                            CornerRadius="6"
+                            Background="Transparent">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:0.12" />
+                                    </VisualStateGroup.Transitions>
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <VisualState.Setters>
+                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                                <VisualStateGroup x:Name="CheckStates">
+                                    <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:0.12" />
+                                    </VisualStateGroup.Transitions>
+                                    <VisualState x:Name="Checked">
+                                        <VisualState.Setters>
+                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                                            <Setter Target="SegmentText.Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Unchecked" />
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter
+                                x:Name="SegmentText"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                FontSize="13"
+                                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="CommonStates">
+                <VisualStateGroup.Transitions>
+                    <VisualTransition GeneratedDuration="0:0:0.15" />
+                </VisualStateGroup.Transitions>
+                <VisualState x:Name="Normal" />
+                <VisualState x:Name="PointerOver">
+                    <VisualState.Setters>
+                        <Setter Target="CardRoot.Background" Value="{ThemeResource LayerFillColorDefaultBrush}" />
+                        <Setter Target="CardRoot.BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Pressed">
+                    <VisualState.Setters>
+                        <Setter Target="CardRoot.Background" Value="{ThemeResource ControlFillColorSecondaryBrush}" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <!--
+            Single-row routing card. The root is a plain Grid so the control
+            stretches to the full ListView row width (Phase 5 wires this into an
+            ItemTemplate); the card itself is the inner rounded Border.
+        -->
+        <Border
+            x:Name="CardRoot"
+            Height="56"
+            Margin="0,4"
+            Padding="12,0"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            PointerEntered="CardRoot_PointerEntered"
+            PointerExited="CardRoot_PointerExited"
+            PointerPressed="CardRoot_PointerPressed"
+            PointerReleased="CardRoot_PointerReleased"
+            PointerCaptureLost="CardRoot_PointerCaptureLost">
+
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- App icon (or letter/glyph placeholder when unavailable). -->
+                <Grid
+                    Grid.Column="0"
+                    Width="32"
+                    Height="32"
+                    VerticalAlignment="Center">
+                    <Border
+                        x:Name="IconFrame"
+                        Width="32"
+                        Height="32"
+                        CornerRadius="6">
+                        <Image
+                            x:Name="IconImage"
+                            Width="32"
+                            Height="32"
+                            Stretch="UniformToFill"
+                            Visibility="Collapsed" />
+                    </Border>
+                    <Border
+                        x:Name="IconFallback"
+                        Width="32"
+                        Height="32"
+                        CornerRadius="6"
+                        Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                        <Grid>
+                            <Viewbox
+                                MaxWidth="18"
+                                MaxHeight="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                                <FontIcon
+                                    x:Name="IconFallbackGlyph"
+                                    Glyph="&#xE7B8;"
+                                    FontSize="16"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </Viewbox>
+                            <TextBlock
+                                x:Name="IconFallbackLetter"
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed" />
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Friendly name + process file name. -->
+                <StackPanel
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Spacing="2">
+                    <TextBlock
+                        x:Name="NameText"
+                        Text="{x:Bind Item.DisplayName, Mode=OneWay}"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        TextTrimming="CharacterEllipsis" />
+                    <TextBlock
+                        x:Name="DetailText"
+                        Text="{x:Bind Item.ProcessName, Mode=OneWay}"
+                        FontSize="12"
+                        Opacity="0.6"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <!--
+                    Three-state routing toggle: Proxy / Direct / Block, styled as a
+                    segmented pill group (SegmentedControl is not available in the
+                    referenced Windows App SDK, so radio buttons stand in).
+                -->
+                <Border
+                    Grid.Column="2"
+                    Width="200"
+                    Height="32"
+                    VerticalAlignment="Center"
+                    CornerRadius="6"
+                    Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <RadioButton
+                            x:Name="ProxySegment"
+                            Grid.Column="0"
+                            Content="代理"
+                            Tag="Proxy"
+                            Style="{StaticResource SegmentRadioButtonStyle}"
+                            Checked="Segment_Checked" />
+                        <RadioButton
+                            x:Name="DirectSegment"
+                            Grid.Column="1"
+                            Content="直连"
+                            Tag="Direct"
+                            Style="{StaticResource SegmentRadioButtonStyle}"
+                            Checked="Segment_Checked" />
+                        <RadioButton
+                            x:Name="BlockSegment"
+                            Grid.Column="2"
+                            Content="阻止"
+                            Tag="Block"
+                            Style="{StaticResource SegmentRadioButtonStyle}"
+                            Checked="Segment_Checked" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
