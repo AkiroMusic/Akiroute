@@ -5,21 +5,22 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    FontFamily="{StaticResource EtFontSans}">
 
     <UserControl.Resources>
         <!--
             Translucent accent gradient under the waveform: bright near the line,
-            fading to transparent at the bottom. Built from SystemAccentColor so
-            it adapts to the current theme; the brush-level Opacity keeps the
-            area subtle (GradientStop has no Opacity member in WinUI 3).
+            fading to transparent at the bottom. Built from the Ethereal accent so
+            it follows the active theme; the brush-level Opacity keeps the area
+            subtle (GradientStop has no Opacity member in WinUI 3).
         -->
         <LinearGradientBrush
             x:Key="WaveAreaBrush"
             StartPoint="0,0"
             EndPoint="0,1"
             Opacity="0.35">
-            <GradientStop Offset="0" Color="{ThemeResource SystemAccentColor}" />
+            <GradientStop Offset="0" Color="{ThemeResource EtAccentColor}" />
             <GradientStop Offset="1" Color="Transparent" />
         </LinearGradientBrush>
     </UserControl.Resources>
@@ -37,17 +38,17 @@
             <Line
                 x:Name="GridLine25"
                 IsHitTestVisible="False"
-                Stroke="{ThemeResource DividerStrokeColorDefaultBrush}"
+                Stroke="{ThemeResource EtBorderBrush}"
                 StrokeThickness="1" />
             <Line
                 x:Name="GridLine50"
                 IsHitTestVisible="False"
-                Stroke="{ThemeResource DividerStrokeColorDefaultBrush}"
+                Stroke="{ThemeResource EtBorderBrush}"
                 StrokeThickness="1" />
             <Line
                 x:Name="GridLine75"
                 IsHitTestVisible="False"
-                Stroke="{ThemeResource DividerStrokeColorDefaultBrush}"
+                Stroke="{ThemeResource EtBorderBrush}"
                 StrokeThickness="1" />
             <Polyline
                 x:Name="WaveFill"
@@ -57,7 +58,7 @@
             <Polyline
                 x:Name="WaveLine"
                 IsHitTestVisible="False"
-                Stroke="{ThemeResource AccentFillColorDefaultBrush}"
+                Stroke="{ThemeResource EtAccentBrush}"
                 StrokeThickness="2"
                 StrokeLineJoin="Round"
                 StrokeStartLineCap="Round"
@@ -71,7 +72,7 @@
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
             FontSize="12"
-            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Foreground="{ThemeResource EtTextSecondaryBrush}"
             Visibility="Collapsed" />
 
         <!-- Shown only when the series is empty. -->
@@ -81,7 +82,7 @@
             VerticalAlignment="Center"
             FontSize="12"
             Opacity="0.6"
-            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Foreground="{ThemeResource EtTextSecondaryBrush}"
             Text="暂无数据"
             Visibility="Collapsed" />
     </Grid>

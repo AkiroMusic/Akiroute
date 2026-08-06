@@ -5,24 +5,27 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    FontFamily="{StaticResource EtFontSans}">
 
     <UserControl.Resources>
         <!--
             One-click start/stop pill button. Defaults to the accent fill (the
             "启动" call to action); the header's Running visual state flips it
-            to a subtle secondary fill with a stop glyph. Content (glyph, text,
+            to a subtle surface fill with a stop glyph. Content (glyph, text,
             progress ring) inherits Foreground from the button template.
         -->
         <Style x:Key="TogglePillButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
-            <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
-            <Setter Property="Height" Value="36" />
-            <Setter Property="MinWidth" Value="104" />
+            <Setter Property="Background" Value="{ThemeResource EtAccentBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="100" />
             <Setter Property="Padding" Value="16,0" />
-            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="CornerRadius" Value="14" />
             <Setter Property="HorizontalAlignment" Value="Right" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -35,17 +38,17 @@
                                     <VisualState x:Name="Normal" />
                                     <VisualState x:Name="PointerOver">
                                         <VisualState.Setters>
-                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource AccentFillColorSecondaryBrush}" />
+                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource EtAccentHoverBrush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Pressed">
                                         <VisualState.Setters>
-                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource AccentFillColorTertiaryBrush}" />
+                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource EtAccent20Brush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Disabled">
                                         <VisualState.Setters>
-                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource ControlFillColorDisabledBrush}" />
+                                            <Setter Target="ButtonRoot.Background" Value="{ThemeResource EtSurface2Brush}" />
                                             <Setter Target="ButtonRoot.Opacity" Value="0.7" />
                                         </VisualState.Setters>
                                     </VisualState>
@@ -54,8 +57,6 @@
                             <Border
                                 x:Name="ButtonRoot"
                                 Background="{TemplateBinding Background}"
-                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
-                                BorderThickness="1"
                                 CornerRadius="{TemplateBinding CornerRadius}">
                                 <ContentPresenter
                                     HorizontalAlignment="Center"
@@ -71,15 +72,16 @@
     </UserControl.Resources>
 
     <!--
-        Top status bar: app identity + status text on the left, the one-click
+        Top status bar (spec section 9): 40px glass surface with a hairline
+        bottom border, app identity + status text on the left, the one-click
         start/stop toggle on the right. All visuals are driven from the
         code-behind dependency properties; nothing here touches a view model.
     -->
     <Border
-        Height="56"
+        Height="40"
         Padding="16,0"
-        Background="{ThemeResource LayerFillColorDefaultBrush}"
-        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        Background="{ThemeResource EtGlassBrush}"
+        BorderBrush="{ThemeResource EtGlassBorderBrush}"
         BorderThickness="0,0,0,1">
 
         <Grid ColumnSpacing="12">
@@ -104,8 +106,8 @@
                             </Storyboard>
                         </VisualState.Storyboard>
                         <VisualState.Setters>
-                            <Setter Target="ToggleButton.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
-                            <Setter Target="ToggleButton.Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                            <Setter Target="ToggleButton.Background" Value="{ThemeResource EtSurface2Brush}" />
+                            <Setter Target="ToggleButton.Foreground" Value="{ThemeResource EtTextPrimaryBrush}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -134,12 +136,12 @@
                 Width="28"
                 Height="28"
                 VerticalAlignment="Center"
-                CornerRadius="6"
-                Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                CornerRadius="8"
+                Background="{ThemeResource EtSurface2Brush}">
                 <FontIcon
                     Glyph="&#xE7B8;"
                     FontSize="14"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Foreground="{ThemeResource EtAccentBrush}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center" />
             </Grid>
@@ -150,9 +152,10 @@
                 Grid.Column="1"
                 VerticalAlignment="Center"
                 Text="Akiroute"
+                FontFamily="{StaticResource EtFontDisplay}"
                 FontSize="15"
                 FontWeight="SemiBold"
-                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                Foreground="{ThemeResource EtTextPrimaryBrush}" />
 
             <!-- Status / error text, truncating when the window is narrow. -->
             <StackPanel
@@ -162,13 +165,13 @@
                 <TextBlock
                     x:Name="StatusText"
                     FontSize="12"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Foreground="{ThemeResource EtTextSecondaryBrush}"
                     TextTrimming="CharacterEllipsis" />
                 <TextBlock
                     x:Name="ErrorText"
                     FontSize="12"
                     FontWeight="SemiBold"
-                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                    Foreground="{ThemeResource EtErrorBrush}"
                     TextTrimming="CharacterEllipsis"
                     Visibility="Collapsed" />
             </StackPanel>
@@ -189,7 +192,7 @@
                     Width="8"
                     Height="8"
                     VerticalAlignment="Center"
-                    Fill="{ThemeResource SystemFillColorSuccessBrush}"
+                    Fill="{ThemeResource EtSuccessBrush}"
                     Visibility="Collapsed" />
 
                 <Button
@@ -200,18 +203,18 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <ProgressRing
                             x:Name="ToggleProgress"
-                            Width="16"
-                            Height="16"
+                            Width="14"
+                            Height="14"
                             IsActive="True"
                             Visibility="Collapsed" />
                         <FontIcon
                             x:Name="ToggleGlyph"
                             Glyph="&#xE768;"
-                            FontSize="14" />
+                            FontSize="12" />
                         <TextBlock
                             x:Name="ToggleText"
                             Text="启动"
-                            FontSize="14"
+                            FontSize="12"
                             FontWeight="SemiBold" />
                     </StackPanel>
                 </Button>

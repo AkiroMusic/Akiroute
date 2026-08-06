@@ -5,7 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    FontFamily="{StaticResource EtFontSans}">
 
     <Grid>
         <VisualStateManager.VisualStateGroups>
@@ -17,12 +18,13 @@
                 <VisualState x:Name="Normal" />
                 <VisualState x:Name="PointerOver">
                     <VisualState.Setters>
-                        <Setter Target="CardRoot.Background" Value="{ThemeResource LayerFillColorDefaultBrush}" />
+                        <Setter Target="CardRoot.Background" Value="{ThemeResource EtTextPrimary6Brush}" />
+                        <Setter Target="CardRoot.BorderBrush" Value="{ThemeResource EtBorderBrush}" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Pressed">
                     <VisualState.Setters>
-                        <Setter Target="CardRoot.Background" Value="{ThemeResource ControlFillColorSecondaryBrush}" />
+                        <Setter Target="CardRoot.Background" Value="{ThemeResource EtAccent12Brush}" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -39,8 +41,8 @@
                 <VisualState x:Name="Unselected" />
                 <VisualState x:Name="Selected">
                     <VisualState.Setters>
-                        <Setter Target="CardRoot.Background" Value="{ThemeResource AccentFillColorTertiaryBrush}" />
-                        <Setter Target="CardRoot.BorderBrush" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                        <Setter Target="CardRoot.Background" Value="{ThemeResource EtAccent13Brush}" />
+                        <Setter Target="CardRoot.BorderBrush" Value="{ThemeResource EtAccentBrush}" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -52,26 +54,26 @@
             <VisualStateGroup x:Name="LatencyStates">
                 <VisualState x:Name="LatencyUntested">
                     <VisualState.Setters>
-                        <Setter Target="LatencyBadge.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
-                        <Setter Target="LatencyText.Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Setter Target="LatencyBadge.Background" Value="{ThemeResource EtSurface2Brush}" />
+                        <Setter Target="LatencyText.Foreground" Value="{ThemeResource EtTextTertiaryBrush}" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="LatencyGreen">
                     <VisualState.Setters>
-                        <Setter Target="LatencyBadge.Background" Value="{ThemeResource SystemFillColorSuccessBrush}" />
-                        <Setter Target="LatencyText.Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+                        <Setter Target="LatencyBadge.Background" Value="{ThemeResource EtSuccess8Brush}" />
+                        <Setter Target="LatencyText.Foreground" Value="{ThemeResource EtSuccessBrush}" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="LatencyCaution">
                     <VisualState.Setters>
-                        <Setter Target="LatencyBadge.Background" Value="{ThemeResource SystemFillColorCautionBrush}" />
-                        <Setter Target="LatencyText.Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
+                        <Setter Target="LatencyBadge.Background" Value="{ThemeResource EtWarning8Brush}" />
+                        <Setter Target="LatencyText.Foreground" Value="{ThemeResource EtWarningBrush}" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="LatencyCritical">
                     <VisualState.Setters>
-                        <Setter Target="LatencyBadge.Background" Value="{ThemeResource SystemFillColorCriticalBrush}" />
-                        <Setter Target="LatencyText.Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+                        <Setter Target="LatencyBadge.Background" Value="{ThemeResource EtError8Brush}" />
+                        <Setter Target="LatencyText.Foreground" Value="{ThemeResource EtErrorBrush}" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -89,10 +91,10 @@
             Padding="12,0"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            Background="{ThemeResource EtSurface1Brush}"
+            BorderBrush="{ThemeResource EtBorderBrush}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource EtRadiusSm}"
             Tapped="CardRoot_Tapped"
             PointerEntered="CardRoot_PointerEntered"
             PointerExited="CardRoot_PointerExited"
@@ -115,13 +117,12 @@
                         x:Name="NameText"
                         FontSize="14"
                         FontWeight="SemiBold"
-                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        Foreground="{ThemeResource EtTextPrimaryBrush}"
                         TextTrimming="CharacterEllipsis" />
                     <TextBlock
                         x:Name="DetailText"
                         FontSize="12"
-                        Opacity="0.6"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Foreground="{ThemeResource EtTextSecondaryBrush}"
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
@@ -134,14 +135,14 @@
                     VerticalAlignment="Center"
                     CornerRadius="11"
                     Padding="8,0"
-                    Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                    Background="{ThemeResource EtSurface2Brush}">
                     <TextBlock
                         x:Name="LatencyText"
                         Text="未测"
                         FontSize="11"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        Foreground="{ThemeResource EtTextTertiaryBrush}" />
                 </Border>
             </Grid>
         </Border>

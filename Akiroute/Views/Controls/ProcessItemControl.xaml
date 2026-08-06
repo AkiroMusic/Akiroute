@@ -5,7 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    FontFamily="{StaticResource EtFontSans}">
 
     <UserControl.Resources>
         <!--
@@ -14,8 +15,8 @@
             automatically by the RadioButton control (CommonStates / CheckStates).
         -->
         <Style x:Key="SegmentRadioButtonStyle" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
-            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Foreground" Value="{ThemeResource EtTextSecondaryBrush}" />
+            <Setter Property="MinHeight" Value="26" />
             <Setter Property="Margin" Value="2" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -32,12 +33,12 @@
                                     <VisualState x:Name="Normal" />
                                     <VisualState x:Name="PointerOver">
                                         <VisualState.Setters>
-                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource EtTextPrimary6Brush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Pressed">
                                         <VisualState.Setters>
-                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource EtTextPrimary6Brush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                 </VisualStateGroup>
@@ -47,8 +48,8 @@
                                     </VisualStateGroup.Transitions>
                                     <VisualState x:Name="Checked">
                                         <VisualState.Setters>
-                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
-                                            <Setter Target="SegmentText.Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                                            <Setter Target="SegmentRoot.Background" Value="{ThemeResource EtAccentBrush}" />
+                                            <Setter Target="SegmentText.Foreground" Value="White" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Unchecked" />
@@ -59,8 +60,9 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Content="{TemplateBinding Content}"
-                                FontSize="13"
-                                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="{ThemeResource EtTextSecondaryBrush}" />
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -77,13 +79,13 @@
                 <VisualState x:Name="Normal" />
                 <VisualState x:Name="PointerOver">
                     <VisualState.Setters>
-                        <Setter Target="CardRoot.Background" Value="{ThemeResource LayerFillColorDefaultBrush}" />
-                        <Setter Target="CardRoot.BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                        <Setter Target="CardRoot.Background" Value="{ThemeResource EtTextPrimary6Brush}" />
+                        <Setter Target="CardRoot.BorderBrush" Value="{ThemeResource EtBorderBrush}" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Pressed">
                     <VisualState.Setters>
-                        <Setter Target="CardRoot.Background" Value="{ThemeResource ControlFillColorSecondaryBrush}" />
+                        <Setter Target="CardRoot.Background" Value="{ThemeResource EtAccent12Brush}" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -101,10 +103,10 @@
             Padding="12,0"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            Background="{ThemeResource EtSurface1Brush}"
+            BorderBrush="{ThemeResource EtBorderBrush}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource EtRadiusSm}"
             PointerEntered="CardRoot_PointerEntered"
             PointerExited="CardRoot_PointerExited"
             PointerPressed="CardRoot_PointerPressed"
@@ -128,7 +130,7 @@
                         x:Name="IconFrame"
                         Width="32"
                         Height="32"
-                        CornerRadius="6">
+                        CornerRadius="{StaticResource EtRadiusSm}">
                         <Image
                             x:Name="IconImage"
                             Width="32"
@@ -140,8 +142,8 @@
                         x:Name="IconFallback"
                         Width="32"
                         Height="32"
-                        CornerRadius="6"
-                        Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                        CornerRadius="{StaticResource EtRadiusSm}"
+                        Background="{ThemeResource EtSurface2Brush}">
                         <Grid>
                             <Viewbox
                                 MaxWidth="18"
@@ -152,13 +154,13 @@
                                     x:Name="IconFallbackGlyph"
                                     Glyph="&#xE7B8;"
                                     FontSize="16"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    Foreground="{ThemeResource EtAccentSecondaryBrush}" />
                             </Viewbox>
                             <TextBlock
                                 x:Name="IconFallbackLetter"
                                 FontSize="16"
                                 FontWeight="SemiBold"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Foreground="{ThemeResource EtAccentSecondaryBrush}"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Visibility="Collapsed" />
@@ -176,14 +178,13 @@
                         Text="{x:Bind Item.DisplayName, Mode=OneWay}"
                         FontSize="14"
                         FontWeight="SemiBold"
-                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                        Foreground="{ThemeResource EtTextPrimaryBrush}"
                         TextTrimming="CharacterEllipsis" />
                     <TextBlock
                         x:Name="DetailText"
                         Text="{x:Bind Item.ProcessName, Mode=OneWay}"
                         FontSize="12"
-                        Opacity="0.6"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Foreground="{ThemeResource EtTextSecondaryBrush}"
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
@@ -195,11 +196,11 @@
                 <Border
                     Grid.Column="2"
                     Width="200"
-                    Height="32"
+                    Height="30"
                     VerticalAlignment="Center"
-                    CornerRadius="6"
-                    Background="{ThemeResource ControlFillColorSecondaryBrush}"
-                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                    CornerRadius="8"
+                    Background="{ThemeResource EtSurface2Brush}"
+                    BorderBrush="{ThemeResource EtBorderBrush}"
                     BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>

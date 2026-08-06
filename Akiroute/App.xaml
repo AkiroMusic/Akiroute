@@ -6,6 +6,12 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <!--
+                    Ethereal Glass design tokens (Aki-Design-System): palette,
+                    fonts, radius, spacing, button/card styles. Merged after
+                    XamlControlsResources so our resources win on collisions.
+                -->
+                <ResourceDictionary Source="Themes/Ethereal.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
