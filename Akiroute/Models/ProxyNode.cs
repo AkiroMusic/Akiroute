@@ -40,4 +40,10 @@ public class ProxyNode
     /// values are serialized natively by System.Text.Json without reflection.
     /// </summary>
     public Dictionary<string, JsonNode>? ExtraParams { get; set; }
+
+    /// <summary>
+    /// 订阅来源 ID；null = 手动导入 / Id of the subscription feed this node
+    /// came from; null = manual.
+    /// </summary>
+    public string? SourceSubscriptionId { get; set; }
 }

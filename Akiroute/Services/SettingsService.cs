@@ -69,7 +69,13 @@ public static class SettingsService
     /// Atomically saves <paramref name="settings"/> to <paramref name="configFilePath"/>:
     /// the JSON is written to "&lt;path&gt;.tmp" first, then moved over the target.
     /// If the target is locked the move is retried once after 50 ms; a second
-    /// failure is rethrown, never swallowed. Writes are serialized by a static lock.
+    /// failure is rethrown, never swallowed (the leftover ".tmp" is cleaned up
+    /// best-effort). Writes are serialized by a static lock.
+    /// Trade-off note: the retry <see cref="Thread.Sleep(int)"/> runs under
+    /// <see cref="SaveLock"/> and can block the calling (UI) thread for up to
+    /// ~50 ms when the target file is transiently locked — accepted because
+    /// saves are infrequent and the alternative (async rework of every caller)
+    /// outweighs the rare stutter.
     /// </summary>
     public static void Save(AppSettings settings, string configFilePath)
     {
@@ -102,6 +108,16 @@ public static class SettingsService
                 catch (Exception retryEx) when (retryEx is IOException or UnauthorizedAccessException)
                 {
                     Debug.WriteLine($"[SettingsService] Save failed, target locked: {fullPath}: {retryEx.Message}");
+                    // Best-effort cleanup so a failed save doesn't litter the config dir.
+                    try
+                    {
+                        File.Delete(tmpPath);
+                    }
+                    catch (Exception cleanupEx) when (cleanupEx is IOException or UnauthorizedAccessException)
+                    {
+                        Debug.WriteLine($"[SettingsService] Could not remove temp file {tmpPath}: {cleanupEx.Message}");
+                    }
+
                     throw;
                 }
             }
@@ -119,6 +135,7 @@ public static class SettingsService
         try
         {
             File.Move(configFilePath, backupPath);
+            AppLogger.Warn($"[SettingsService] Renamed corrupt file to: {backupPath}");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

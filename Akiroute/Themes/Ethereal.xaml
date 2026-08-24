@@ -88,6 +88,14 @@
             <SolidColorBrush x:Key="EtGlassBorderBrush" Color="{StaticResource EtGlassBorderColor}" />
             <!-- inner bezel line: rgba(255,255,255,0.045) -->
             <SolidColorBrush x:Key="EtInnerLineBrush" Color="#0BFFFFFF" />
+            <!-- Text on accent backgrounds: white provides ~3.1:1 contrast against Dark
+                 accent #6C8CFF — passes WCAG AA for large/bold text (≥14px bold);
+                 standard convention for accent-filled buttons across Fluent/Apple/Google -->
+            <SolidColorBrush x:Key="EtTextOnAccentBrush" Color="#FFFFFF" />
+            <!-- Keyboard focus rings (used by all custom ControlTemplates). Defined here
+                 so template parsing never depends on uncertain system resource keys. -->
+            <SolidColorBrush x:Key="FocusVisualPrimaryBrush" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="FocusVisualSecondaryBrush" Color="#66FFFFFF" />
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
@@ -150,6 +158,14 @@
             <SolidColorBrush x:Key="EtGlassBrush" Color="{StaticResource EtGlassColor}" />
             <SolidColorBrush x:Key="EtGlassBorderBrush" Color="{StaticResource EtGlassBorderColor}" />
             <SolidColorBrush x:Key="EtInnerLineBrush" Color="#0B1C1C1E" />
+            <!-- Text on accent backgrounds: white on Light accent #5B7FFF ≈ 3.5:1 contrast;
+                 passes WCAG AA for large/bold text (≥14px bold); 12px SemiBold pill labels
+                 follow standard accent-text conventions for interactive elements -->
+            <SolidColorBrush x:Key="EtTextOnAccentBrush" Color="#FFFFFF" />
+            <!-- Keyboard focus rings (used by all custom ControlTemplates). Defined here
+                 so template parsing never depends on uncertain system resource keys. -->
+            <SolidColorBrush x:Key="FocusVisualPrimaryBrush" Color="#FF1C1C1E" />
+            <SolidColorBrush x:Key="FocusVisualSecondaryBrush" Color="#661C1C1E" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 
@@ -241,6 +257,7 @@
         <Setter Property="FontSize" Value="12" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -255,16 +272,33 @@
                                     <VisualState.Setters>
                                         <Setter Target="Root.Foreground" Value="{ThemeResource EtTextSecondaryBrush}" />
                                         <Setter Target="Root.BorderBrush" Value="{ThemeResource EtTextTertiaryBrush}" />
+                                        <Setter Target="FocusOuter.BorderBrush" Value="Transparent" />
+                                        <Setter Target="FocusInner.BorderBrush" Value="Transparent" />
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Pressed">
                                     <VisualState.Setters>
                                         <Setter Target="Root.Background" Value="{ThemeResource EtTextPrimary6Brush}" />
+                                        <Setter Target="FocusOuter.BorderBrush" Value="Transparent" />
+                                        <Setter Target="FocusInner.BorderBrush" Value="Transparent" />
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Disabled">
                                     <VisualState.Setters>
                                         <Setter Target="Root.Opacity" Value="0.4" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <!-- Keyboard focus: 2px double-ring; collapses on PointerOver/Pressed -->
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0:0:0.15" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="Focused">
+                                    <VisualState.Setters>
+                                        <Setter Target="FocusOuter.BorderBrush" Value="{ThemeResource FocusVisualPrimaryBrush}" />
+                                        <Setter Target="FocusInner.BorderBrush" Value="{ThemeResource FocusVisualSecondaryBrush}" />
                                     </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>
@@ -283,6 +317,12 @@
                                 ContentTemplate="{TemplateBinding ContentTemplate}"
                                 Foreground="{TemplateBinding Foreground}" />
                         </Border>
+                        <Border x:Name="FocusOuter" BorderThickness="2" BorderBrush="Transparent"
+                                CornerRadius="{TemplateBinding CornerRadius}" Margin="-3"
+                                IsHitTestVisible="False" />
+                        <Border x:Name="FocusInner" BorderThickness="1" BorderBrush="Transparent"
+                                CornerRadius="{TemplateBinding CornerRadius}" Margin="-1"
+                                IsHitTestVisible="False" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -302,6 +342,7 @@
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -315,16 +356,33 @@
                                 <VisualState x:Name="PointerOver">
                                     <VisualState.Setters>
                                         <Setter Target="Root.Background" Value="{ThemeResource EtAccent15Brush}" />
+                                        <Setter Target="FocusOuter.BorderBrush" Value="Transparent" />
+                                        <Setter Target="FocusInner.BorderBrush" Value="Transparent" />
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Pressed">
                                     <VisualState.Setters>
                                         <Setter Target="Root.Background" Value="{ThemeResource EtAccent20Brush}" />
+                                        <Setter Target="FocusOuter.BorderBrush" Value="Transparent" />
+                                        <Setter Target="FocusInner.BorderBrush" Value="Transparent" />
                                     </VisualState.Setters>
                                 </VisualState>
                                 <VisualState x:Name="Disabled">
                                     <VisualState.Setters>
                                         <Setter Target="Root.Opacity" Value="0.4" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <!-- Keyboard focus: 2px double-ring; collapses on PointerOver/Pressed -->
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0:0:0.15" />
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Unfocused" />
+                                <VisualState x:Name="Focused">
+                                    <VisualState.Setters>
+                                        <Setter Target="FocusOuter.BorderBrush" Value="{ThemeResource FocusVisualPrimaryBrush}" />
+                                        <Setter Target="FocusInner.BorderBrush" Value="{ThemeResource FocusVisualSecondaryBrush}" />
                                     </VisualState.Setters>
                                 </VisualState>
                             </VisualStateGroup>
@@ -343,6 +401,12 @@
                                 ContentTemplate="{TemplateBinding ContentTemplate}"
                                 Foreground="{TemplateBinding Foreground}" />
                         </Border>
+                        <Border x:Name="FocusOuter" BorderThickness="2" BorderBrush="Transparent"
+                                CornerRadius="{TemplateBinding CornerRadius}" Margin="-3"
+                                IsHitTestVisible="False" />
+                        <Border x:Name="FocusInner" BorderThickness="1" BorderBrush="Transparent"
+                                CornerRadius="{TemplateBinding CornerRadius}" Margin="-1"
+                                IsHitTestVisible="False" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

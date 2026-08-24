@@ -33,6 +33,9 @@ public partial class MainViewModel : ObservableObject
     /// <summary>The per-process routing child view model.</summary>
     public ProcessListViewModel Processes { get; }
 
+    /// <summary>The logs viewer child view model.</summary>
+    public LogsViewModel Logs { get; }
+
     private bool _isProxyRunning;
 
     /// <summary>Mirror of <see cref="ProxyStatusViewModel.IsRunning"/> for tray/menu bindings.</summary>
@@ -82,6 +85,7 @@ public partial class MainViewModel : ObservableObject
         Settings = new SettingsViewModel(settings, _runOnUiThread);
         Status = new ProxyStatusViewModel(xray, settings, _runOnUiThread);
         Processes = new ProcessListViewModel(monitor, settings, _runOnUiThread);
+        Logs = new LogsViewModel(n => AppLogger.ReadTail(n), () => Status.RecentLogs);
 
         IsProxyRunning = Status.IsRunning;
         Status.PropertyChanged += OnStatusPropertyChanged;

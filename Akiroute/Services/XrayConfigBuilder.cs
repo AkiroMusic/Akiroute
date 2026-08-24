@@ -56,16 +56,19 @@ public static class XrayConfigBuilder
         var config = new JsonObject
         {
             ["log"] = BuildLogSection(),
+            // Explicit (JsonNode?) casts on every element: without them the
+            // compiler binds Add<JsonObject>, whose RequiresDynamicCode/Requires-
+            // UnreferencedCode annotations trip IL3050/IL2026 under Native AOT.
             ["inbounds"] = new JsonArray
             {
-                BuildSocksInbound(localPort),
-                BuildHttpInbound(localPort + 1),
+                (JsonNode?)BuildSocksInbound(localPort),
+                (JsonNode?)BuildHttpInbound(localPort + 1),
             },
             ["outbounds"] = new JsonArray
             {
-                BuildProxyOutbound(node),
-                new JsonObject { ["protocol"] = "freedom", ["tag"] = "direct" },
-                new JsonObject { ["protocol"] = "blackhole", ["tag"] = "block" },
+                (JsonNode?)BuildProxyOutbound(node),
+                (JsonNode?)new JsonObject { ["protocol"] = "freedom", ["tag"] = "direct" },
+                (JsonNode?)new JsonObject { ["protocol"] = "blackhole", ["tag"] = "block" },
             },
             ["routing"] = new JsonObject
             {
@@ -129,14 +132,14 @@ public static class XrayConfigBuilder
         {
             ["address"] = node.Address!,
             ["port"] = JsonValue.Create(node.Port),
-            ["users"] = new JsonArray { user },
+            ["users"] = new JsonArray { (JsonNode?)user },
         };
 
         var outbound = new JsonObject
         {
             ["tag"] = "proxy",
             ["protocol"] = "vless",
-            ["settings"] = new JsonObject { ["vnext"] = new JsonArray { vnext } },
+            ["settings"] = new JsonObject { ["vnext"] = new JsonArray { (JsonNode?)vnext } },
         };
         outbound["streamSettings"] = BuildStreamSettings(p, defaultSecurity: "none");
         return outbound;
@@ -168,14 +171,14 @@ public static class XrayConfigBuilder
         {
             ["address"] = node.Address!,
             ["port"] = JsonValue.Create(node.Port),
-            ["users"] = new JsonArray { user },
+            ["users"] = new JsonArray { (JsonNode?)user },
         };
 
         var outbound = new JsonObject
         {
             ["tag"] = "proxy",
             ["protocol"] = "vmess",
-            ["settings"] = new JsonObject { ["vnext"] = new JsonArray { vnext } },
+            ["settings"] = new JsonObject { ["vnext"] = new JsonArray { (JsonNode?)vnext } },
         };
         outbound["streamSettings"] = BuildVmessStreamSettings(p);
         return outbound;
@@ -197,7 +200,7 @@ public static class XrayConfigBuilder
         {
             ["tag"] = "proxy",
             ["protocol"] = "ss",
-            ["settings"] = new JsonObject { ["servers"] = new JsonArray { server } },
+            ["settings"] = new JsonObject { ["servers"] = new JsonArray { (JsonNode?)server } },
         };
     }
 
@@ -216,7 +219,7 @@ public static class XrayConfigBuilder
         {
             ["tag"] = "proxy",
             ["protocol"] = "trojan",
-            ["settings"] = new JsonObject { ["servers"] = new JsonArray { server } },
+            ["settings"] = new JsonObject { ["servers"] = new JsonArray { (JsonNode?)server } },
         };
         outbound["streamSettings"] = BuildStreamSettings(p, defaultSecurity: "tls");
         return outbound;
@@ -233,7 +236,7 @@ public static class XrayConfigBuilder
         };
         AddString(server, "password", Str(p, "password"));
 
-        var settings = new JsonObject { ["servers"] = new JsonArray { server } };
+        var settings = new JsonObject { ["servers"] = new JsonArray { (JsonNode?)server } };
 
         var tls = new JsonObject { ["sni"] = Str(p, "sni") ?? node.Address! };
         if (BoolParam(p, "insecure") ?? false)
@@ -286,7 +289,7 @@ public static class XrayConfigBuilder
 
         var settings = new JsonObject
         {
-            ["servers"] = new JsonArray { server },
+            ["servers"] = new JsonArray { (JsonNode?)server },
             ["tls"] = tls,
         };
 
@@ -447,7 +450,7 @@ public static class XrayConfigBuilder
         var host = Str(p, "host");
         if (!string.IsNullOrEmpty(host))
         {
-            http["host"] = new JsonArray { host };
+            http["host"] = new JsonArray { (JsonNode?)JsonValue.Create(host) };
         }
         AddString(http, "path", Str(p, "path"));
         return http;
@@ -477,26 +480,26 @@ public static class XrayConfigBuilder
                 _ => "proxy",
             };
 
-            rules.Add(new JsonObject
+            rules.Add((JsonNode?)new JsonObject
             {
                 ["type"] = "field",
-                ["process"] = new JsonArray { rule.ProcessName },
+                ["process"] = new JsonArray { (JsonNode?)JsonValue.Create(rule.ProcessName) },
                 ["outboundTag"] = outboundTag,
             });
         }
 
         if (mode == ProxyMode.Rule)
         {
-            rules.Add(new JsonObject
+            rules.Add((JsonNode?)new JsonObject
             {
                 ["type"] = "field",
-                ["domain"] = new JsonArray { "geosite:cn" },
+                ["domain"] = new JsonArray { (JsonNode?)JsonValue.Create("geosite:cn") },
                 ["outboundTag"] = "direct",
             });
         }
 
         var catchAll = mode is ProxyMode.DirectOnly or ProxyMode.ProcessOnly ? "direct" : "proxy";
-        rules.Add(new JsonObject
+        rules.Add((JsonNode?)new JsonObject
         {
             ["type"] = "field",
             ["network"] = "tcp,udp",
@@ -597,7 +600,7 @@ public static class XrayConfigBuilder
         var array = new JsonArray();
         foreach (var part in alpn.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            array.Add(part);
+            array.Add((JsonNode?)JsonValue.Create(part));
         }
         return array.Count > 0 ? array : null;
     }

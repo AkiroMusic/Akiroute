@@ -390,4 +390,55 @@ public class XrayConfigBuilderTests
         Assert.Equal("warning", reparsed["log"]!["loglevel"]!.GetValue<string>());
         Assert.Equal("IPIfNonMatch", reparsed["routing"]!["domainStrategy"]!.GetValue<string>());
     }
+
+    /// <summary>
+    /// Theory covering all four ProxyMode values with two process rules (one
+    /// Direct, one Block). Asserts: correct outboundTag per rule present in
+    /// routing rules; geosite:cn rule present iff mode == Rule; catch-all
+    /// outboundTag == "proxy" for Global/Rule and "direct" for DirectOnly/ProcessOnly.
+    /// </summary>
+    [Theory]
+    [InlineData(ProxyMode.Global)]
+    [InlineData(ProxyMode.Rule)]
+    [InlineData(ProxyMode.DirectOnly)]
+    [InlineData(ProxyMode.ProcessOnly)]
+    public void Build_AllModes_ProcessRulesAndCatchAll(ProxyMode mode)
+    {
+        // Arrange: two process rules — one Direct, one Block.
+        IReadOnlyList<ProcessRule> rules = new List<ProcessRule>
+        {
+            new() { ProcessName = "notepad.exe", Action = ProcessAction.Direct },
+            new() { ProcessName = "steam.exe", Action = ProcessAction.Block },
+        };
+
+        // Act.
+        var config = XrayConfigBuilder.Build(VlessNode(), rules, LocalPort, mode);
+        var routingRules = config["routing"]!["rules"]!.AsArray();
+
+        // Assert: the two process rules are present with correct outboundTags.
+        Assert.Equal("notepad.exe", routingRules[0]!["process"]![0]!.GetValue<string>());
+        Assert.Equal("direct", routingRules[0]!["outboundTag"]!.GetValue<string>());
+        Assert.Equal("steam.exe", routingRules[1]!["process"]![0]!.GetValue<string>());
+        Assert.Equal("block", routingRules[1]!["outboundTag"]!.GetValue<string>());
+
+        // Assert: geosite:cn rule present iff mode == Rule.
+        var hasGeositeCn = false;
+        for (var i = 0; i < routingRules.Count; i++)
+        {
+            var domain = routingRules[i]!["domain"];
+            if (domain is not null && domain.AsArray().Count > 0
+                && domain![0]!.GetValue<string>() == "geosite:cn")
+            {
+                hasGeositeCn = true;
+                Assert.Equal("direct", routingRules[i]!["outboundTag"]!.GetValue<string>());
+            }
+        }
+
+        Assert.Equal(mode == ProxyMode.Rule, hasGeositeCn);
+
+        // Assert: catch-all (last rule) outboundTag depends on mode.
+        var expectedCatchAll = mode is ProxyMode.DirectOnly or ProxyMode.ProcessOnly ? "direct" : "proxy";
+        Assert.Equal("tcp,udp", routingRules[^1]!["network"]!.GetValue<string>());
+        Assert.Equal(expectedCatchAll, routingRules[^1]!["outboundTag"]!.GetValue<string>());
+    }
 }

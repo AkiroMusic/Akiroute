@@ -64,9 +64,24 @@ public class AppSettings
     /// <summary>Minutes between automatic subscription updates; 0 = off.</summary>
     public int SubscriptionAutoUpdateMinutes { get; set; }
 
+    /// <summary>自动测速间隔（分钟），0 表示关闭自动测速。</summary>
+    public int AutoPingMinutes { get; set; }
+
     /// <summary>Route traffic through the Windows TUN adapter.</summary>
     public bool TunEnabled { get; set; }
 
     /// <summary>Application theme preference.</summary>
     public AppTheme Theme { get; set; } = AppTheme.System;
+
+    /// <summary>Saved window X position in physical pixels; null = never saved.</summary>
+    public int? WindowX { get; set; }
+
+    /// <summary>Saved window Y position in physical pixels; null = never saved.</summary>
+    public int? WindowY { get; set; }
+
+    /// <summary>Saved window width in physical pixels; null = never saved.</summary>
+    public int? WindowWidth { get; set; }
+
+    /// <summary>Saved window height in physical pixels; null = never saved.</summary>
+    public int? WindowHeight { get; set; }
 }

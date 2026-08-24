@@ -38,7 +38,9 @@ public enum XrayServiceState
 public sealed class XrayService : IDisposable
 {
     /// <summary>Maximum number of recent log lines kept for the crash tail.</summary>
-    private const int LogRingCapacity = 20;
+    // Internal (not private) so the test assembly can size its assertions
+    // against the real capacity via InternalsVisibleTo instead of hardcoding.
+    internal const int LogRingCapacity = 500;
 
     /// <summary>Hard ceiling for the startup readiness probe.</summary>
     private const int ReadinessTimeoutMs = 3000;
@@ -100,6 +102,39 @@ public sealed class XrayService : IDisposable
         _xrayExePath = xrayExePath ?? AppPaths.XrayExe;
         _configTempPath = configTempPath ?? AppPaths.XrayConfigTemp;
         _rulesDir = AppPaths.RulesDir;
+    }
+
+    /// <summary>
+    /// Kills any orphaned xray process whose <c>MainModule.FileName</c> matches
+    /// <paramref name="enginePath"/>. Called on startup to clean up crashes
+    /// that left the engine running from a previous session.
+    /// </summary>
+    public static void KillOrphanedEngine(string enginePath)
+    {
+        foreach (var proc in Process.GetProcessesByName("xray"))
+        {
+            try
+            {
+                var mainModule = proc.MainModule;
+                if (mainModule is not null
+                    && string.Equals(mainModule.FileName, enginePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    proc.Kill(entireProcessTree: true);
+                    proc.WaitForExit(2000);
+                    AppLogger.Info($"killed orphaned engine pid={proc.Id}, path matched");
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
+            {
+                // The process exited or its module info is inaccessible mid-check; safe to ignore.
+                Debug.WriteLine($"[XrayService] Orphan cleanup: could not inspect/kill process {proc.Id}: {ex.Message}");
+                AppLogger.Warn($"[XrayService] Orphan cleanup: could not inspect/kill process {proc.Id}: {ex.Message}");
+            }
+            finally
+            {
+                proc.Dispose();
+            }
+        }
     }
 
     /// <summary>
@@ -538,6 +573,7 @@ public sealed class XrayService : IDisposable
             LastCrashSummary = string.IsNullOrWhiteSpace(tail)
                 ? $"xray exited unexpectedly (code {exitCode})"
                 : tail;
+            AppLogger.Error($"xray crashed (code {exitCode}): {LastCrashSummary}");
             CleanupProcess();
             SetState(XrayServiceState.Failed);
         }
@@ -578,7 +614,10 @@ public sealed class XrayService : IDisposable
         }
 
         var tmpPath = fullPath + ".tmp";
-        var json = JsonSerializer.Serialize(config);
+        // ToJsonString() writes the DOM directly — reflection-free and AOT-safe.
+        // The previous JsonSerializer.Serialize<JsonObject>(...) call tripped
+        // IL3050/IL2026 under Native AOT (reflection-based metadata lookup).
+        var json = config.ToJsonString();
 
         File.WriteAllText(tmpPath, json);
         File.Move(tmpPath, fullPath, overwrite: true);

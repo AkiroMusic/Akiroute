@@ -105,6 +105,26 @@ public sealed class ProcessMonitorService
             }
         }
 
+        // Evict icon cache entries for processes that disappeared since the
+        // last scan, preventing unbounded growth over long sessions.
+        foreach (var path in _iconCache.Keys)
+        {
+            if (!seenPaths.Contains(path))
+            {
+                if (_iconCache.TryRemove(path, out var icon) && icon is IDisposable disposable)
+                {
+                    try
+                    {
+                        disposable.Dispose();
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException or COMException)
+                    {
+                        // Already disposed, or the runtime already released the handle.
+                    }
+                }
+            }
+        }
+
         return snapshot;
     }
 

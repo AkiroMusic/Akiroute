@@ -14,22 +14,129 @@ namespace Akiroute.Services;
 public static partial class NodeLinkParser
 {
     /// <summary>
-    /// Parses every link in <paramref name="rawText"/> into nodes. Links may be
-    /// separated by any whitespace (spaces, newlines, tabs). Malformed or
-    /// unsupported links are skipped silently; an empty result never throws.
+    /// Parses every link in <paramref name="rawText"/> into nodes. Direct links
+    /// (separated by any whitespace) are tried first; when none parse, the whole
+    /// input is treated as a Base64 subscription body — whitespace is stripped,
+    /// the compact string is decoded, and the decoded links are parsed. Malformed
+    /// or unsupported links are skipped silently; an empty result never throws.
     /// </summary>
     /// <returns>Valid nodes in order of appearance.</returns>
     public static List<ProxyNode> Parse(string rawText)
     {
-        var result = new List<ProxyNode>();
         if (string.IsNullOrWhiteSpace(rawText))
         {
-            return result;
+            return [];
         }
 
+        var result = ParseTokens(rawText);
+        if (result.Count == 0)
+        {
+            result = ParseSubscriptionBody(rawText);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Cheap shape check modeled on HexagonProxy's <c>_is_plausible_share_uri</c>:
+    /// rejects tokens that cannot be a share link before the full parse runs.
+    /// vless/trojan/hysteria2/hy2/tuic need userinfo@host:port, vmess needs a
+    /// base64 payload, and ss needs '@' (or a base64 payload that decodes to one).
+    /// </summary>
+    private static bool IsPlausibleLink(string token)
+    {
+        var schemeEnd = token.IndexOf("://", StringComparison.Ordinal);
+        if (schemeEnd <= 0 || schemeEnd == token.Length - 3)
+        {
+            return false;
+        }
+
+        var scheme = token[..schemeEnd].ToLowerInvariant();
+        var payload = token[(schemeEnd + 3)..].Trim();
+        if (payload.Length < 8)
+        {
+            return false;
+        }
+
+        switch (scheme)
+        {
+            case "vless":
+            case "trojan":
+            case "hysteria2":
+            case "hy2":
+            case "tuic":
+                // Authority must carry non-empty userinfo@host:port ("[::1]:443" included).
+                SplitBody(payload, out var authority, out _, out _);
+                var at = authority.LastIndexOf('@');
+                return at > 0
+                    && at < authority.Length - 1
+                    && authority[(at + 1)..].Contains(':');
+            case "vmess":
+                var hash = payload.IndexOf('#');
+                var vmessPayload = hash < 0 ? payload : payload[..hash];
+                return IsBase64Alphabet(vmessPayload);
+            case "ss":
+                // SIP002 userinfo@host:port, or a legacy base64 payload that
+                // decodes to "method:password@host:port".
+                SplitBody(payload, out var ssAuthority, out _, out _);
+                return ssAuthority.Contains('@')
+                    || (IsBase64Alphabet(ssAuthority) && TryDecodeBase64(ssAuthority)?.Contains('@') is true);
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Interprets the whole input as a Base64 subscription body: whitespace is
+    /// stripped, and the compact string (only base64 alphabet, 16+ chars) is
+    /// decoded and its links parsed. Decoded text is parsed once — never
+    /// re-decoded — so a base64-looking body that yields no links returns empty
+    /// instead of looping.
+    /// </summary>
+    private static List<ProxyNode> ParseSubscriptionBody(string rawText)
+    {
+        var compact = new StringBuilder(rawText.Length);
+        foreach (var ch in rawText)
+        {
+            if (!char.IsWhiteSpace(ch))
+            {
+                compact.Append(ch);
+            }
+        }
+
+        if (compact.Length < 16 || !IsBase64Alphabet(compact.ToString()))
+        {
+            return [];
+        }
+
+        var decoded = TryDecodeBase64(compact.ToString());
+        return decoded is null ? [] : ParseTokens(decoded);
+    }
+
+    /// <summary>True when every character is from the base64 alphabet (A-Za-z0-9+/=_-).</summary>
+    private static bool IsBase64Alphabet(string text)
+    {
+        foreach (var ch in text)
+        {
+            var isDigit = ch is >= '0' and <= '9';
+            var isUpper = ch is >= 'A' and <= 'Z';
+            var isLower = ch is >= 'a' and <= 'z';
+            if (!isDigit && !isUpper && !isLower && ch is not ('+' or '/' or '=' or '-' or '_'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Splits raw text into whitespace-separated tokens, keeping only plausible links.</summary>
+    private static List<ProxyNode> ParseTokens(string rawText)
+    {
+        var result = new List<ProxyNode>();
         foreach (var token in rawText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
         {
-            if (TryParseLink(token) is { } node)
+            if (IsPlausibleLink(token) && TryParseLink(token) is { } node)
             {
                 result.Add(node);
             }

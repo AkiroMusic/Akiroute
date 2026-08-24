@@ -183,6 +183,121 @@ public class SettingsViewModelTests
         }
     }
 
+    // ---- Subscription management tests (W4) ----------------------------------
+
+    [Fact]
+    public void SubscriptionEntries_ExposesLiveList()
+    {
+        var settings = new AppSettings();
+        var vm = NewViewModel(settings);
+
+        var entry = new SubscriptionEntry { Name = "TestSub", Url = "https://example.com/sub" };
+        settings.Subscriptions.Add(entry);
+        vm.RefreshSubscriptionsView();
+
+        Assert.Single(vm.SubscriptionEntries);
+        Assert.Same(entry, vm.SubscriptionEntries[0]);
+    }
+
+    [Fact]
+    public void RemoveSubscription_RemovesFromSettings_AndPersistsToFile()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "akiroute-tests-settings", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "settings.json");
+        try
+        {
+            var entry = new SubscriptionEntry { Name = "ToBeRemoved", Url = "https://example.com/removed" };
+
+            // Seed: create VM, add entry, save to file.
+            var settings = new AppSettings();
+            settings.Subscriptions.Add(entry);
+            var vm = NewViewModel(settings);
+            vm.ConfigFilePath = path;
+            vm.Save();
+            Assert.True(File.Exists(path));
+
+            // Act: remove the entry.
+            vm.RemoveSubscription(entry);
+            vm.RefreshSubscriptionsView();
+
+            Assert.Empty(vm.SubscriptionEntries);
+
+            // Reload from disk and verify the entry is gone.
+            var reloaded = new AppSettings();
+            var vm2 = NewViewModel(reloaded);
+            vm2.ConfigFilePath = path;
+            vm2.Load();
+
+            Assert.Empty(reloaded.Subscriptions);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void RemoveSubscription_MissingEntry_NoThrow_ListUnchanged()
+    {
+        var settings = new AppSettings();
+        var vm = NewViewModel(settings);
+        var entry = new SubscriptionEntry { Name = "Ghost", Url = "https://example.com/ghost" };
+
+        vm.RemoveSubscription(entry);
+
+        Assert.Empty(settings.Subscriptions);
+    }
+
+    [Fact]
+    public void PropertyChanged_SubscriptionEntries_RaisedOnRefresh()
+    {
+        var settings = new AppSettings();
+        var vm = NewViewModel(settings);
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.RefreshSubscriptionsView();
+
+        Assert.Contains(nameof(SettingsViewModel.SubscriptionEntries), raised);
+    }
+
+    /// <summary>
+    /// Per-subscription AutoUpdateMinutes override (when &gt; 0) takes precedence
+    /// over the global SubscriptionAutoUpdateMinutes via GetEffectiveIntervalMinutes.
+    /// </summary>
+    [Fact]
+    public void PerSubscriptionAutoUpdateMinutes_OverridesGlobalInterval()
+    {
+        var settings = new AppSettings { SubscriptionAutoUpdateMinutes = 30 };
+        var nodes = NewNodeListViewModel(settings);
+
+        var entry = new SubscriptionEntry
+        {
+            Name = "OverrideSub",
+            Url = "https://example.com/override",
+            AutoUpdateMinutes = 15,
+        };
+
+        Assert.Equal(15, nodes.GetEffectiveIntervalMinutes(entry));
+
+        // 零值回退到全局设置
+        entry.AutoUpdateMinutes = 0;
+        Assert.Equal(30, nodes.GetEffectiveIntervalMinutes(entry));
+    }
+
     private static SettingsViewModel NewViewModel(AppSettings settings) =>
         new(settings, static action => action());
+
+    private static NodeListViewModel NewNodeListViewModel(AppSettings settings)
+    {
+        var ping = new PingService(new StubTester());
+        return new NodeListViewModel(settings, ping, static action => action());
+    }
+
+    private sealed class StubTester : Akiroute.Services.IProxyTester
+    {
+        public Task<long?> MeasureAsync(Akiroute.Models.ProxyNode node, CancellationToken cancellationToken) =>
+            Task.FromResult<long?>(42);
+    }
 }

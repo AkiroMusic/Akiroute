@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ======================== Navigation Rail ======================== -->
+  <data name="NavNodesLabel.Text" xml:space="preserve">
+    <value>节点</value>
+  </data>
+  <data name="NavProcessesLabel.Text" xml:space="preserve">
+    <value>进程</value>
+  </data>
+  <data name="NavLogsLabel.Text" xml:space="preserve">
+    <value>日志</value>
+  </data>
+  <data name="NavSettingsLabel.Text" xml:space="preserve">
+    <value>设置</value>
+  </data>
+
+  <!-- ======================== Nodes Page ======================== -->
+  <data name="NodesPageTitle.Text" xml:space="preserve">
+    <value>节点</value>
+  </data>
+  <data name="NodesPageSubtitle.Text" xml:space="preserve">
+    <value>节点管理</value>
+  </data>
+  <data name="NodesSearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索节点</value>
+  </data>
+  <data name="NodesPingBtn.Text" xml:space="preserve">
+    <value>测速</value>
+  </data>
+  <data name="NodesImportBtn.Text" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="NodesEditBtn.Text" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="NodesEmptyLine1.Text" xml:space="preserve">
+    <value>暂无节点</value>
+  </data>
+  <data name="NodesEmptyLine2.Text" xml:space="preserve">
+    <value>点击「导入」添加</value>
+  </data>
+  <data name="NodeCtxEdit.Text" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="NodeCtxDelete.Text" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="NodeCtxCopyAddr.Text" xml:space="preserve">
+    <value>复制地址</value>
+  </data>
+  <data name="NodeCtxCopyLink.Text" xml:space="preserve">
+    <value>复制链接</value>
+  </data>
+
+  <!-- ======================== Traffic Chart ======================== -->
+  <data name="TrafficTitle.Text" xml:space="preserve">
+    <value>实时流量</value>
+  </data>
+  <data name="TrafficEmptyHint.Text" xml:space="preserve">
+    <value>暂无数据</value>
+  </data>
+
+  <!-- ======================== Processes Page ======================== -->
+  <data name="ProcessesTitle.Text" xml:space="preserve">
+    <value>进程路由</value>
+  </data>
+  <data name="ProcessesSubtitle.Text" xml:space="preserve">
+    <value>按进程选择代理路径</value>
+  </data>
+  <data name="ProcessesRefreshBtn.Text" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="ProcessesEmptyHint.Text" xml:space="preserve">
+    <value>未发现可路由的进程</value>
+  </data>
+  <data name="ProcessCtxProxy.Text" xml:space="preserve">
+    <value>走代理</value>
+  </data>
+  <data name="ProcessCtxDirect.Text" xml:space="preserve">
+    <value>直连</value>
+  </data>
+  <data name="ProcessCtxBlock.Text" xml:space="preserve">
+    <value>阻止</value>
+  </data>
+  <data name="ProcSegmentProxy.Content" xml:space="preserve">
+    <value>代理</value>
+  </data>
+  <data name="ProcSegmentDirect.Content" xml:space="preserve">
+    <value>直连</value>
+  </data>
+  <data name="ProcSegmentBlock.Content" xml:space="preserve">
+    <value>阻止</value>
+  </data>
+
+  <!-- ======================== Logs Page ======================== -->
+  <data name="AppLogTitle.Text" xml:space="preserve">
+    <value>应用日志</value>
+  </data>
+  <data name="AppLogCopyBtn.Text" xml:space="preserve">
+    <value>复制</value>
+  </data>
+  <data name="AppLogRefreshBtn.Text" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="EngineLogTitle.Text" xml:space="preserve">
+    <value>引擎日志</value>
+  </data>
+  <data name="EngineLogCopyBtn.Text" xml:space="preserve">
+    <value>复制</value>
+  </data>
+  <data name="EngineLogRefreshBtn.Text" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+
+  <!-- ======================== Settings Page ======================== -->
+  <data name="SettingsTitle.Text" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="SettingsSubtitle.Text" xml:space="preserve">
+    <value>路由、外观与更新偏好</value>
+  </data>
+  <data name="SettingsProxyLabel.Text" xml:space="preserve">
+    <value>代理</value>
+  </data>
+  <data name="SettingsRoutingMode.Text" xml:space="preserve">
+    <value>路由模式</value>
+  </data>
+  <data name="SettingsModeGlobal.Content" xml:space="preserve">
+    <value>全局</value>
+  </data>
+  <data name="SettingsModeRule.Content" xml:space="preserve">
+    <value>规则</value>
+  </data>
+  <data name="SettingsModeDirectOnly.Content" xml:space="preserve">
+    <value>仅直连</value>
+  </data>
+  <data name="SettingsModeProcessOnly.Content" xml:space="preserve">
+    <value>仅进程</value>
+  </data>
+  <data name="SettingsLocalPort.Text" xml:space="preserve">
+    <value>本地端口</value>
+  </data>
+  <data name="SettingsAutoConnect.Header" xml:space="preserve">
+    <value>启动时自动连接</value>
+  </data>
+  <data name="SettingsAutoConnect.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="SettingsAutoConnect.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="SettingsTun.Header" xml:space="preserve">
+    <value>启用 TUN 模式</value>
+  </data>
+  <data name="SettingsTun.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="SettingsTun.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="SettingsAppearanceLabel.Text" xml:space="preserve">
+    <value>外观与更新</value>
+  </data>
+  <data name="SettingsTheme.Text" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="SettingsThemeSystem.Content" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="SettingsThemeDark.Content" xml:space="preserve">
+    <value>深色</value>
+  </data>
+  <data name="SettingsThemeLight.Content" xml:space="preserve">
+    <value>浅色</value>
+  </data>
+  <data name="SettingsSubAutoUpdate.Text" xml:space="preserve">
+    <value>订阅自动更新（分钟）</value>
+  </data>
+  <data name="SettingsAutoPing.Text" xml:space="preserve">
+    <value>自动测速（分钟）</value>
+  </data>
+  <data name="SettingsSubscriptionsLabel.Text" xml:space="preserve">
+    <value>订阅源</value>
+  </data>
+  <data name="SubsEmptyLine1.Text" xml:space="preserve">
+    <value>暂无订阅源</value>
+  </data>
+  <data name="SubsEmptyLine2.Text" xml:space="preserve">
+    <value>通过「导入」添加订阅地址</value>
+  </data>
+  <data name="SettingsBackupBtn.Text" xml:space="preserve">
+    <value>备份配置</value>
+  </data>
+  <data name="SettingsRestoreBtn.Text" xml:space="preserve">
+    <value>恢复配置</value>
+  </data>
+  <data name="SettingsSaveBtn.Content" xml:space="preserve">
+    <value>保存设置</value>
+  </data>
+
+  <!-- ======================== Footer ======================== -->
+  <data name="FooterCopyright.Text" xml:space="preserve">
+    <value>© 2026 Akiro · 仅供学习与交流使用</value>
+  </data>
+  <data name="FooterVersionTooltip.Text" xml:space="preserve">
+    <value>Akiroute v0.1.1&#x0a;Copyright © 2026 Akiro. 保留所有权利。&#x0a;本软件仅供学习与交流使用，禁止商业用途、复制与再分发。&#x0a;Akiroute v0.1.1 — All rights reserved. For learning and communication only. No commercial use, copying, or redistribution.</value>
+  </data>
+
+  <!-- ======================== Status Header ======================== -->
+  <data name="StatusToggleBtn.Text" xml:space="preserve">
+    <value>启动</value>
+  </data>
+
+  <!-- ======================== Node Card ======================== -->
+  <data name="NodeCardUntested.Text" xml:space="preserve">
+    <value>未测</value>
+  </data>
+  <data name="NodeCardLatencyUntested" xml:space="preserve">
+    <value>未测</value>
+  </data>
+
+  <!-- ======================== Edit Node Dialog ======================== -->
+  <data name="EditNodeDlg.Title" xml:space="preserve">
+    <value>编辑节点</value>
+  </data>
+  <data name="EditNodeDlg.PrimaryButtonText" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="EditNodeDlg.CloseButtonText" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="EditNodeName.Header" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="EditNodeName.PlaceholderText" xml:space="preserve">
+    <value>节点显示名称</value>
+  </data>
+  <data name="EditNodeType.Header" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="EditNodeType.PlaceholderText" xml:space="preserve">
+    <value>协议类型</value>
+  </data>
+  <data name="EditNodeAddr.Header" xml:space="preserve">
+    <value>地址</value>
+  </data>
+  <data name="EditNodeAddr.PlaceholderText" xml:space="preserve">
+    <value>服务器主机名或 IP</value>
+  </data>
+  <data name="EditNodePort.Header" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="EditNodeExtra.Header" xml:space="preserve">
+    <value>高级参数 (ExtraParams)</value>
+  </data>
+
+  <!-- ======================== Import Dialog ======================== -->
+  <data name="ImportDlg.Title" xml:space="preserve">
+    <value>导入节点</value>
+  </data>
+  <data name="ImportDlg.PrimaryButtonText" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="ImportDlg.CloseButtonText" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="ImportLinkMode.Content" xml:space="preserve">
+    <value>粘贴链接</value>
+  </data>
+  <data name="ImportUrlMode.Content" xml:space="preserve">
+    <value>订阅地址</value>
+  </data>
+  <data name="ImportPasteBox.PlaceholderText" xml:space="preserve">
+    <value>粘贴 vless://, vmess://, ss://, trojan://, hysteria2://, tuic:// 链接、Base64 订阅正文或 Clash 配置</value>
+  </data>
+  <data name="ImportUrlBox.PlaceholderText" xml:space="preserve">
+    <value>https:// 订阅地址</value>
+  </data>
+
+  <!-- ======================== Code-behind / ViewModel Strings (Loc.Get keys) ======================== -->
+
+  <!-- Status messages (ProxyStatusViewModel) -->
+  <data name="Status.ToggleStart" xml:space="preserve">
+    <value>启动</value>
+  </data>
+  <data name="Status.ToggleStop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Status.StartFailed" xml:space="preserve">
+    <value>启动失败</value>
+  </data>
+  <data name="Status.NoNodeSelected" xml:space="preserve">
+    <value>未选择节点</value>
+  </data>
+  <data name="Status.ConnectFailed" xml:space="preserve">
+    <value>连接失败</value>
+  </data>
+  <data name="Status.Connecting" xml:space="preserve">
+    <value>正在连接…</value>
+  </data>
+  <data name="Status.ConnectedPort" xml:space="preserve">
+    <value>已连接 · 端口 {0}</value>
+  </data>
+  <data name="Status.Connected" xml:space="preserve">
+    <value>已连接</value>
+  </data>
+  <data name="Status.Disconnected" xml:space="preserve">
+    <value>未连接</value>
+  </data>
+
+  <!-- Error messages (NodeListViewModel) -->
+  <data name="Error.SubUrlInvalid" xml:space="preserve">
+    <value>订阅地址无效</value>
+  </data>
+  <data name="Error.SubFetchFailed" xml:space="preserve">
+    <value>订阅获取失败: {0}</value>
+  </data>
+  <data name="Error.SubNoNodesParsed" xml:space="preserve">
+    <value>未解析到任何节点：订阅内容不是有效的节点链接、Base64 订阅正文或 Clash 配置</value>
+  </data>
+  <data name="Error.SubNoNodesParsedShort" xml:space="preserve">
+    <value>未解析到任何节点</value>
+  </data>
+
+  <!-- Info messages (NodeListViewModel) -->
+  <data name="Info.SubUpdated" xml:space="preserve">
+    <value>订阅已更新：新增 {0}，移除 {1}</value>
+  </data>
+  <data name="Info.ImportedNodes" xml:space="preserve">
+    <value>已导入 {0} 个节点</value>
+  </data>
+
+  <!-- MainWindow code-behind dialog strings -->
+  <data name="Error.PleaseSelectNode" xml:space="preserve">
+    <value>请先选择一个节点</value>
+  </data>
+  <data name="Dialog.BackupSuccess" xml:space="preserve">
+    <value>备份已保存</value>
+  </data>
+  <data name="Dialog.BackupSuccessDetail" xml:space="preserve">
+    <value>配置已导出到：{0}</value>
+  </data>
+  <data name="Dialog.BackupFail" xml:space="preserve">
+    <value>备份失败</value>
+  </data>
+  <data name="Dialog.RestoreFail" xml:space="preserve">
+    <value>恢复失败</value>
+  </data>
+  <data name="Dialog.RestoreFailInvalid" xml:space="preserve">
+    <value>配置文件无效或无法读取</value>
+  </data>
+  <data name="Dialog.RestoreSuccess" xml:space="preserve">
+    <value>恢复成功</value>
+  </data>
+  <data name="Dialog.RestoreSuccessDetail" xml:space="preserve">
+    <value>恢复成功，重启应用后生效</value>
+  </data>
+  <data name="Dialog.RestoreFailDetail" xml:space="preserve">
+    <value>写入配置失败：{0}</value>
+  </data>
+  <data name="Dialog.Ok" xml:space="preserve">
+    <value>确定</value>
+  </data>
+
+  <!-- EditNodeDialog validation strings -->
+  <data name="EditNodeValidation.NameEmpty" xml:space="preserve">
+    <value>名称不能为空</value>
+  </data>
+  <data name="EditNodeValidation.AddressEmpty" xml:space="preserve">
+    <value>地址不能为空</value>
+  </data>
+  <data name="EditNodeValidation.PortInvalid" xml:space="preserve">
+    <value>端口必须是 1 - 65535 之间的整数</value>
+  </data>
+  <data name="EditNodeValidation.ExtraInvalid" xml:space="preserve">
+    <value>高级参数必须是有效的 JSON 对象</value>
+  </data>
+
+  <!-- LogsViewModel empty placeholder -->
+  <data name="Logs.EmptyPlaceholder" xml:space="preserve">
+    <value>（暂无日志）</value>
+  </data>
+
+  <!-- SettingsViewModel save error (for future use) -->
+  <data name="Error.SaveFailed" xml:space="preserve">
+    <value>保存失败: {0}</value>
+  </data>
+
+  <!-- TrayIconService strings (for future use) -->
+  <data name="Tray.StopProxy" xml:space="preserve">
+    <value>停止代理</value>
+  </data>
+  <data name="Tray.StartProxy" xml:space="preserve">
+    <value>启动代理</value>
+  </data>
+  <data name="Tray.SwitchNode" xml:space="preserve">
+    <value>切换节点 · {0}</value>
+  </data>
+  <data name="Tray.ShowWindow" xml:space="preserve">
+    <value>显示主窗口</value>
+  </data>
+  <data name="Tray.Exit" xml:space="preserve">
+    <value>退出</value>
+  </data>
+
+</root>

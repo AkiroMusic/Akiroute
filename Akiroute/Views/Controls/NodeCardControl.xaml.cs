@@ -1,4 +1,5 @@
 using System;
+using Akiroute.Helpers;
 using Akiroute.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -78,7 +79,7 @@ public sealed partial class NodeCardControl : UserControl
         string state;
         if (pingMs < 0)
         {
-            LatencyText.Text = "未测";
+            LatencyText.Text = Loc.Get("NodeCardLatencyUntested");
             state = "LatencyUntested";
         }
         else if (pingMs < 100)
@@ -117,4 +118,10 @@ public sealed partial class NodeCardControl : UserControl
 
     private void CardRoot_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
         => VisualStateManager.GoToState(this, "Normal", true);
+
+    private void OnGotFocus(object sender, RoutedEventArgs e)
+        => VisualStateManager.GoToState(this, "Focused", true);
+
+    private void OnLostFocus(object sender, RoutedEventArgs e)
+        => VisualStateManager.GoToState(this, "Unfocused", true);
 }

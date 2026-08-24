@@ -83,7 +83,7 @@
             FontSize="12"
             Opacity="0.6"
             Foreground="{ThemeResource EtTextSecondaryBrush}"
-            Text="暂无数据"
+            x:Uid="TrafficEmptyHint"
             Visibility="Collapsed" />
     </Grid>
 </UserControl>

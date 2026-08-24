@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Threading;
 using Akiroute.Helpers;
 using Akiroute.Models;
 using Akiroute.Services;
@@ -140,11 +141,36 @@ public partial class ProxyStatusViewModel : ObservableObject
         xray.LogReceived += OnXrayLogReceived;
     }
 
+    /// <summary>
+    /// Debounce window (ms) that swallows overlapping/rapid toggle requests.
+    /// Covers the real races: a tray-menu toggle landing while a header-button
+    /// toggle is still in flight, and double-clicks firing two toggles within
+    /// one event-loop turn. Distinct user clicks spaced further apart than the
+    /// window always pass through, so normal start→stop usage is unaffected.
+    /// </summary>
+    private const long ToggleDebounceMs = 300;
+
+    /// <summary>Timestamp (<see cref="Environment.TickCount64"/>) of the last accepted toggle.</summary>
+    private long _lastToggleTick;
+
     /// <summary>Starts the proxy when stopped; stops it when running.</summary>
     /// <param name="cancellationToken">Cancels the pending start/stop.</param>
     [RelayCommand]
     public async Task ToggleProxyAsync(CancellationToken cancellationToken = default)
     {
+        // Single atomic read-and-claim: two concurrent callers (tray + header
+        // button) can never both pass this check. A rejected call still refreshes
+        // the timestamp, which only marginally extends the window under deliberate
+        // spam — irrelevant for human click cadence.
+        var now = Environment.TickCount64;
+        if (now - Interlocked.Exchange(ref _lastToggleTick, now) < ToggleDebounceMs)
+        {
+            // A toggle is in flight or just completed — ignore this request
+            // instead of racing it (which would show a false "连接失败" over a
+            // successful start or sample traffic twice).
+            return;
+        }
+
         if (IsRunning)
         {
             await StopProxyAsync(cancellationToken).ConfigureAwait(true);
@@ -170,8 +196,8 @@ public partial class ProxyStatusViewModel : ObservableObject
             var node = ResolveSelectedNode();
             if (node is null)
             {
-                StatusMessage = "启动失败";
-                LastError = "未选择节点";
+                StatusMessage = Loc.Get("Status.StartFailed");
+                LastError = Loc.Get("Status.NoNodeSelected");
                 return;
             }
 
@@ -185,8 +211,8 @@ public partial class ProxyStatusViewModel : ObservableObject
             }
             else
             {
-                StatusMessage = "连接失败";
-                LastError = _xray.LastCrashSummary ?? "启动失败";
+                StatusMessage = Loc.Get("Status.ConnectFailed");
+                LastError = _xray.LastCrashSummary ?? Loc.Get("Status.StartFailed");
             }
         }
         finally
@@ -224,7 +250,7 @@ public partial class ProxyStatusViewModel : ObservableObject
         {
             case XrayServiceState.Starting:
                 IsStarting = true;
-                StatusMessage = "正在连接…";
+                StatusMessage = Loc.Get("Status.Connecting");
                 break;
 
             case XrayServiceState.Running:
@@ -232,20 +258,20 @@ public partial class ProxyStatusViewModel : ObservableObject
                 IsRunning = true;
                 LocalPort = _xray.LocalPort;
                 LastError = null;
-                StatusMessage = LocalPort > 0 ? $"已连接 · 端口 {LocalPort}" : "已连接";
+                StatusMessage = LocalPort > 0 ? string.Format(Loc.Get("Status.ConnectedPort"), LocalPort) : Loc.Get("Status.Connected");
                 break;
 
             case XrayServiceState.Failed:
                 IsStarting = false;
                 IsRunning = false;
-                StatusMessage = "连接失败";
-                LastError = _xray.LastCrashSummary ?? "启动失败";
+                StatusMessage = Loc.Get("Status.ConnectFailed");
+                LastError = _xray.LastCrashSummary ?? Loc.Get("Status.StartFailed");
                 break;
 
             default:
                 IsStarting = false;
                 IsRunning = false;
-                StatusMessage = "未连接";
+                StatusMessage = Loc.Get("Status.Disconnected");
                 break;
         }
     }

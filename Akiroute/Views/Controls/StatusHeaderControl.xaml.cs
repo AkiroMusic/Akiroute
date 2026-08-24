@@ -1,4 +1,5 @@
 using System;
+using Akiroute.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -114,7 +115,7 @@ public sealed partial class StatusHeaderControl : UserControl
 
         // Toggle glyph/text and running dot.
         ToggleGlyph.Glyph = IsRunning ? "\uE71A" : "\uE768";
-        ToggleText.Text = IsRunning ? "停止" : "启动";
+        ToggleText.Text = IsRunning ? Loc.Get("Status.ToggleStop") : Loc.Get("Status.ToggleStart");
         DotIndicator.Visibility = IsRunning ? Visibility.Visible : Visibility.Collapsed;
 
         _ = VisualStateManager.GoToState(this, IsRunning ? "Running" : "Stopped", true);

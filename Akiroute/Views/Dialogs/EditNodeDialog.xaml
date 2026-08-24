@@ -6,9 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="编辑节点"
-    PrimaryButtonText="保存"
-    CloseButtonText="取消"
+    x:Uid="EditNodeDlg"
     DefaultButton="Primary"
     PrimaryButtonClick="OnPrimaryButtonClick">
 
@@ -16,22 +14,19 @@
         <StackPanel Spacing="12" MinWidth="420">
             <TextBox
                 x:Name="NameBox"
-                Header="名称"
-                PlaceholderText="节点显示名称" />
+                x:Uid="EditNodeName" />
 
             <ComboBox
                 x:Name="TypeBox"
-                Header="类型"
-                PlaceholderText="协议类型" />
+                x:Uid="EditNodeType" />
 
             <TextBox
                 x:Name="AddressBox"
-                Header="地址"
-                PlaceholderText="服务器主机名或 IP" />
+                x:Uid="EditNodeAddr" />
 
             <TextBox
                 x:Name="PortBox"
-                Header="端口"
+                x:Uid="EditNodePort"
                 PlaceholderText="1 - 65535" />
 
             <!--
@@ -40,13 +35,13 @@
             -->
             <Expander
                 x:Name="ExtraExpander"
-                Header="高级参数 (ExtraParams)">
+                x:Uid="EditNodeExtra">
                 <TextBox
                     x:Name="ExtraParamsBox"
                     Height="140"
                     AcceptsReturn="True"
                     TextWrapping="Wrap"
-                    FontFamily="Consolas"
+                    FontFamily="{StaticResource EtFontMono}"
                     FontSize="12"
                     PlaceholderText="{}{ }" />
             </Expander>

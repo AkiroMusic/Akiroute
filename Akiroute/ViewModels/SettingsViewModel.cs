@@ -40,6 +40,7 @@ public partial class SettingsViewModel : ObservableObject
     private int _port;
     private bool _autoConnect;
     private int _subscriptionAutoUpdateMinutes;
+    private int _autoPingMinutes;
     private bool _tunEnabled;
 
     /// <summary>Failure text from the last <see cref="Save"/>; null when the last save succeeded.</summary>
@@ -125,6 +126,20 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>自动测速间隔（分钟），同步至 <see cref="AppSettings.AutoPingMinutes"/>。</summary>
+    public int AutoPingMinutes
+    {
+        get => _autoPingMinutes;
+        set
+        {
+            if (SetProperty(ref _autoPingMinutes, value) && !_suppressSync)
+            {
+                Settings.AutoPingMinutes = value;
+                NotifyChanged();
+            }
+        }
+    }
+
     /// <summary>Route traffic through the Windows TUN adapter, synced to <see cref="AppSettings.TunEnabled"/>.</summary>
     public bool TunEnabled
     {
@@ -137,6 +152,43 @@ public partial class SettingsViewModel : ObservableObject
                 NotifyChanged();
             }
         }
+    }
+
+    /// <summary>
+    /// 当前订阅源条目的只读视图；ItemsControl 绑定此属性以枚举
+    /// <see cref="Settings.Subscriptions"/>。调用 <see cref="RefreshSubscriptionsView"/>
+    /// 使绑定刷新。
+    /// </summary>
+    /// <summary>
+    /// 订阅源条目的只读视图。每次访问返回快照副本：Native AOT 下 ItemsControl 的
+    /// x:Bind 在属性变更时比较引用，原地修改同一 List 实例不会触发重绑定，
+    /// 因此必须返回新实例才能让删除/新增即时反映到界面。
+    /// Read-only view over <see cref="Settings.Subscriptions"/>. Returns a
+    /// snapshot COPY per access: x:Bind skips rebinding when the property value
+    /// reference is unchanged, so in-place mutations of the same List instance
+    /// would never reach the UI without a fresh instance per read.
+    /// 调用 <see cref="RefreshSubscriptionsView"/> 使绑定刷新。
+    /// </summary>
+    public IReadOnlyList<SubscriptionEntry> SubscriptionEntries => Settings.Subscriptions.ToList();
+
+    /// <summary>
+    /// Raises <see cref="PropertyChanged"/> for <see cref="SubscriptionEntries"/>
+    /// so the ItemsControl re-enumerates the live list.
+    /// </summary>
+    public void RefreshSubscriptionsView() =>
+        OnPropertyChanged(nameof(SubscriptionEntries));
+
+    /// <summary>
+    /// 移除指定订阅源条目并持久化；null 参数安全忽略。
+    /// </summary>
+    [RelayCommand]
+    public void RemoveSubscription(SubscriptionEntry? entry)
+    {
+        if (entry is null) return;
+
+        Settings.Subscriptions.Remove(entry);
+        RefreshSubscriptionsView();
+        Save();
     }
 
     /// <summary>
@@ -167,6 +219,7 @@ public partial class SettingsViewModel : ObservableObject
             Port = settings.Port;
             AutoConnect = settings.AutoConnect;
             SubscriptionAutoUpdateMinutes = settings.SubscriptionAutoUpdateMinutes;
+            AutoPingMinutes = settings.AutoPingMinutes;
             TunEnabled = settings.TunEnabled;
         }
         finally
@@ -193,10 +246,12 @@ public partial class SettingsViewModel : ObservableObject
             Settings.Nodes = loaded.Nodes;
             Settings.ProcessRules = loaded.ProcessRules;
             Settings.Subscriptions = loaded.Subscriptions;
+            RefreshSubscriptionsView();
             Settings.Mode = loaded.Mode;
             Settings.Port = loaded.Port;
             Settings.AutoConnect = loaded.AutoConnect;
             Settings.SubscriptionAutoUpdateMinutes = loaded.SubscriptionAutoUpdateMinutes;
+            Settings.AutoPingMinutes = loaded.AutoPingMinutes;
             Settings.TunEnabled = loaded.TunEnabled;
             Settings.Theme = loaded.Theme;
 
@@ -205,6 +260,7 @@ public partial class SettingsViewModel : ObservableObject
             Port = loaded.Port;
             AutoConnect = loaded.AutoConnect;
             SubscriptionAutoUpdateMinutes = loaded.SubscriptionAutoUpdateMinutes;
+            AutoPingMinutes = loaded.AutoPingMinutes;
             TunEnabled = loaded.TunEnabled;
             SaveError = null;
         }
@@ -235,7 +291,7 @@ public partial class SettingsViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            SaveError = $"保存失败: {ex.Message}";
+            SaveError = string.Format(Loc.Get("Error.SaveFailed"), ex.Message);
         }
     }
 

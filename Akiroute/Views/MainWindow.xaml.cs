@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using Akiroute.Helpers;
 using Akiroute.Models;
+using Akiroute.Services;
 using Akiroute.ViewModels;
 using Akiroute.Views.Controls;
 using Akiroute.Views.Dialogs;
@@ -10,7 +11,10 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage.Pickers;
 
 namespace Akiroute.Views;
 
@@ -43,8 +47,13 @@ public sealed partial class MainWindow : Window
 
         Root.DataContext = _vm;
 
-        _navItemStyle = (Style)Root.Resources["NavItemStyle"];
-        _navItemSelectedStyle = (Style)Root.Resources["NavItemSelectedStyle"];
+        // Capture nav styles from the buttons that declare them in XAML. Native
+        // AOT projects ResourceDictionary lookups as DependencyObject (breaking
+        // direct Style casts), while applied element properties stay typed and
+        // AOT-safe. NavNodesButton declares the Selected variant because it is
+        // the initially-active item.
+        _navItemStyle = NavProcessesButton.Style;
+        _navItemSelectedStyle = NavNodesButton.Style;
 
         // Brand logo: the PNG ships next to the engine assets in the output
         // directory; unpackaged apps resolve image sources from the exe folder.
@@ -63,22 +72,43 @@ public sealed partial class MainWindow : Window
         // subscribe per card as containers are realized, and unsubscribe on recycle.
         ProcessesList.ContainerContentChanging += ProcessesList_ContainerContentChanging;
 
+        // Subscription rows need date formatting on realization.
+        SubscriptionsList.ContainerContentChanging += SubscriptionsList_ContainerContentChanging;
+
         // Project the initial proxy state onto the status header DPs.
         PushStatus();
         _vm.Status.PropertyChanged += OnStatusPropertyChanged;
 
         // Persist the shared settings whenever process rules or imports change.
         _vm.Processes.RulesChanged += (_, _) => _vm.SaveSettings();
-        _vm.Nodes.NodesImported += (_, _) => _vm.SaveSettings();
+        _vm.Nodes.NodesImported += (_, _) =>
+        {
+            _vm.SaveSettings();
+            _vm.Settings.RefreshSubscriptionsView();
+            UpdateSubscriptionsEmptyHint();
+        };
+
+        // Empty-state hint must track the LIVE collection (import/delete), not a
+        // one-shot load-time evaluation.
+        _vm.Nodes.Nodes.CollectionChanged += (_, _) => UpdateNodesEmptyHint();
+        UpdateNodesEmptyHint();
 
         Root.Loaded += OnRootLoaded;
     }
+
+    /// <summary>Shows the nodes empty-state hint only when no nodes exist.</summary>
+    private void UpdateNodesEmptyHint()
+        => NodesEmptyHint.Visibility = _vm.Nodes.Nodes.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
     private void OnRootLoaded(object sender, RoutedEventArgs e)
     {
         Root.Loaded -= OnRootLoaded;
         SelectNav("nodes");
         SyncSettingsControls();
+        _vm.Settings.RefreshSubscriptionsView();
+        UpdateSubscriptionsEmptyHint();
         _ = RefreshProcessesAsync();
     }
 
@@ -96,11 +126,55 @@ public sealed partial class MainWindow : Window
     {
         SetNavActive(NavNodesButton, tag == "nodes");
         SetNavActive(NavProcessesButton, tag == "processes");
+        SetNavActive(NavLogsButton, tag == "logs");
         SetNavActive(NavSettingsButton, tag == "settings");
 
         NodesPanel.Visibility = tag == "nodes" ? Visibility.Visible : Visibility.Collapsed;
         ProcessesPanel.Visibility = tag == "processes" ? Visibility.Visible : Visibility.Collapsed;
+        LogsPanel.Visibility = tag == "logs" ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
+
+        // Fade-in the newly visible panel (~188ms opacity 0→1). The panels stay
+        // in the visual tree across switches, so EntranceThemeTransition never
+        // re-fires — this code-behind storyboard replaces it on every switch.
+        if (tag == "nodes")
+        {
+            FadeInPanel(NodesPanel);
+        }
+        else if (tag == "processes")
+        {
+            FadeInPanel(ProcessesPanel);
+        }
+        else if (tag == "logs")
+        {
+            _vm.Logs.Refresh();
+            FadeInPanel(LogsPanel);
+        }
+        else if (tag == "settings")
+        {
+            FadeInPanel(SettingsPanel);
+        }
+    }
+
+    /// <summary>
+    /// Runs a brief opacity fade-in (0→1, ~188 ms) on the given panel.
+    /// Must be called synchronously after setting Visibility = Visible so the
+    /// initial opacity = 0 is applied before the next frame renders.
+    /// </summary>
+    private static void FadeInPanel(FrameworkElement panel)
+    {
+        panel.Opacity = 0;
+        var animation = new DoubleAnimation
+        {
+            From = 0d,
+            To = 1d,
+            Duration = new Duration(TimeSpan.FromMilliseconds(188)),
+        };
+        Storyboard.SetTarget(animation, panel);
+        Storyboard.SetTargetProperty(animation, "Opacity");
+        var sb = new Storyboard();
+        sb.Children.Add(animation);
+        sb.Begin();
     }
 
     private void SetNavActive(Button button, bool active)
@@ -236,27 +310,11 @@ public sealed partial class MainWindow : Window
         var node = _vm.Nodes.SelectedNode;
         if (node is null)
         {
-            StatusHeader.ErrorMessage = "请先选择一个节点";
+            StatusHeader.ErrorMessage = Loc.Get("Error.PleaseSelectNode");
             return;
         }
 
-        var dialog = new EditNodeDialog(node) { XamlRoot = Content.XamlRoot };
-        var result = await dialog.ShowAsync();
-        if (result != ContentDialogResult.Primary)
-        {
-            return;
-        }
-
-        // The dialog edits a private copy; apply its result onto the live node.
-        var edited = dialog.Node;
-        node.Name = edited.Name;
-        node.Type = edited.Type;
-        node.Address = edited.Address;
-        node.Port = edited.Port;
-        node.ExtraParams = edited.ExtraParams;
-
-        _vm.SaveSettings();
-        RefreshNodeCards();
+        await ShowEditNodeDialog(node);
     }
 
     // ---- Processes panel --------------------------------------------------------
@@ -330,6 +388,7 @@ public sealed partial class MainWindow : Window
         SetComboSelection(ThemeCombo, _vm.Settings.Theme.ToString());
         PortBox.Text = _vm.Settings.Port.ToString();
         MinutesBox.Text = _vm.Settings.SubscriptionAutoUpdateMinutes.ToString();
+        PingMinutesBox.Text = _vm.Settings.AutoPingMinutes.ToString();
         AutoConnectToggle.IsOn = _vm.Settings.AutoConnect;
         TunToggle.IsOn = _vm.Settings.TunEnabled;
     }
@@ -381,6 +440,26 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void PingMinutesBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (int.TryParse(PingMinutesBox.Text.Trim(), out int minutes) && minutes >= 0)
+        {
+            _vm.Settings.AutoPingMinutes = minutes;
+        }
+    }
+
+    /// <summary>Updates the per-subscription auto-update interval override.</summary>
+    private void SubAutoUpdateBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox { DataContext: SubscriptionEntry entry }
+            && int.TryParse(((TextBox)sender).Text.Trim(), out int minutes)
+            && minutes >= 0)
+        {
+            entry.AutoUpdateMinutes = minutes;
+            _vm.SaveSettings();
+        }
+    }
+
     private void AutoConnectToggle_Toggled(object sender, RoutedEventArgs e)
         => _vm.Settings.AutoConnect = AutoConnectToggle.IsOn;
 
@@ -391,6 +470,259 @@ public sealed partial class MainWindow : Window
     {
         _vm.Settings.Save();
         StatusHeader.ErrorMessage = _vm.Settings.SaveError;
+    }
+
+    // ---- Subscription management ------------------------------------------------
+
+    /// <summary>
+    /// Handles the "删除" ghost button click inside each subscription row;
+    /// extracts the <see cref="SubscriptionEntry"/> from the button's
+    /// <see cref="FrameworkElement.DataContext"/> and forwards it to the remove command.
+    /// </summary>
+    private void OnRemoveSubscriptionClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: SubscriptionEntry entry })
+        {
+            _vm.Settings.RemoveSubscriptionCommand.Execute(entry);
+            UpdateSubscriptionsEmptyHint();
+        }
+    }
+
+    /// <summary>Formats the last-updated date text for each realized subscription row.</summary>
+    private void SubscriptionsList_ContainerContentChanging(
+        ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.ItemContainer.ContentTemplateRoot is Grid grid
+            && args.Item is SubscriptionEntry entry
+            && grid.FindName("LastUpdatedText") is TextBlock dateText)
+        {
+            dateText.Text = entry.LastUpdated.HasValue
+                ? $" · {entry.LastUpdated.Value:yyyy-MM-dd}"
+                : string.Empty;
+        }
+    }
+
+    /// <summary>Shows the subscriptions empty-state hint only when no entries exist.</summary>
+    private void UpdateSubscriptionsEmptyHint()
+        => SubscriptionsEmptyHint.Visibility = _vm.Settings.SubscriptionEntries.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    // ---- Config backup / restore -------------------------------------------------
+
+    /// <summary>
+    /// Exports the live config to a user-chosen JSON file. The picker is
+    /// initialized with the WinRT interop HWND bridge (unpackaged WinUI 3
+    /// requirement).
+    /// </summary>
+    private async void OnBackupConfigClick(object sender, RoutedEventArgs e)
+    {
+        var picker = new FileSavePicker();
+        // Unpackaged WinUI 3: the picker must be parented to the window handle.
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        picker.SuggestedFileName = $"akiroute-config-{DateTime.Now:yyyyMMdd-HHmmss}";
+        picker.FileTypeChoices.Add("JSON", [".json"]);
+
+        var file = await picker.PickSaveFileAsync();
+        if (file is null) return;
+
+        try
+        {
+            ConfigBackupService.ExportToFile(_vm.Settings.Settings, file.Path);
+
+            var dialog = new ContentDialog
+            {
+                Title = Loc.Get("Dialog.BackupSuccess"),
+                Content = string.Format(Loc.Get("Dialog.BackupSuccessDetail"), file.Path),
+                CloseButtonText = Loc.Get("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            var dialog = new ContentDialog
+            {
+                Title = Loc.Get("Dialog.BackupFail"),
+                Content = ex.Message,
+                CloseButtonText = Loc.Get("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await dialog.ShowAsync();
+        }
+    }
+
+    /// <summary>
+    /// Imports a backup JSON file and overwrites the live config atomically.
+    /// In-session VMs keep the old state until restart — any post-restore
+    /// in-app save would overwrite the restored file with stale VM state,
+    /// so a prompt restart is required (documented known limitation).
+    /// </summary>
+    private async void OnRestoreConfigClick(object sender, RoutedEventArgs e)
+    {
+        var picker = new FileOpenPicker();
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        picker.FileTypeFilter.Add(".json");
+
+        var file = await picker.PickSingleFileAsync();
+        if (file is null) return;
+
+        var restored = ConfigBackupService.ImportFromFile(file.Path);
+        if (restored is null)
+        {
+            var errorDialog = new ContentDialog
+            {
+                Title = Loc.Get("Dialog.RestoreFail"),
+                Content = Loc.Get("Dialog.RestoreFailInvalid"),
+                CloseButtonText = Loc.Get("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await errorDialog.ShowAsync();
+            return;
+        }
+
+        // Write restored config to the live settings path atomically. The save
+        // (and the success dialog that must only appear after it) is guarded so
+        // an I/O failure surfaces as a dialog instead of crashing the process
+        // from this async void handler.
+        try
+        {
+            SettingsService.Save(restored);
+
+            var dialog = new ContentDialog
+            {
+                Title = Loc.Get("Dialog.RestoreSuccess"),
+                Content = Loc.Get("Dialog.RestoreSuccessDetail"),
+                CloseButtonText = Loc.Get("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            var errorDialog = new ContentDialog
+            {
+                Title = Loc.Get("Dialog.RestoreFail"),
+                Content = string.Format(Loc.Get("Dialog.RestoreFailDetail"), ex.Message),
+                CloseButtonText = Loc.Get("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await errorDialog.ShowAsync();
+        }
+    }
+
+    // ---- Node context menu -------------------------------------------------------
+
+    private async void OnNodeEditContextClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { DataContext: ProxyNode node })
+        {
+            await ShowEditNodeDialog(node);
+        }
+    }
+
+    private void OnNodeDeleteContextClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { DataContext: ProxyNode node })
+        {
+            // [RelayCommand] generates a public IRelayCommand<ProxyNode> property
+            // even when the annotated method is private.
+            _vm.Nodes.DeleteNodeCommand.Execute(node);
+        }
+    }
+
+    private void OnNodeCopyAddressClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { DataContext: ProxyNode { Address: { } address } })
+        {
+            var package = new DataPackage();
+            package.SetText(address);
+            Clipboard.SetContent(package);
+        }
+    }
+
+    private void OnNodeCopyLinkClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { DataContext: ProxyNode { RawConfig: { } raw } })
+        {
+            var package = new DataPackage();
+            package.SetText(raw);
+            Clipboard.SetContent(package);
+        }
+    }
+
+    // ---- Logs panel -----------------------------------------------------------
+
+    private void OnCopyAppLogClick(object sender, RoutedEventArgs e)
+    {
+        var text = _vm.Logs.AppLogText;
+        if (!string.IsNullOrEmpty(text))
+        {
+            var package = new DataPackage();
+            package.SetText(text);
+            Clipboard.SetContent(package);
+        }
+    }
+
+    private void OnCopyEngineLogClick(object sender, RoutedEventArgs e)
+    {
+        var text = _vm.Logs.EngineLogText;
+        if (!string.IsNullOrEmpty(text))
+        {
+            var package = new DataPackage();
+            package.SetText(text);
+            Clipboard.SetContent(package);
+        }
+    }
+
+    private void OnRefreshLogsClick(object sender, RoutedEventArgs e)
+    {
+        _vm.Logs.Refresh();
+    }
+
+    // ---- Process context menu -----------------------------------------------------
+
+    private void OnProcessActionContextClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { DataContext: ProcessInfoItem item, Tag: string tag })
+        {
+            ProcessAction action = tag switch
+            {
+                "Direct" => ProcessAction.Direct,
+                "Block" => ProcessAction.Block,
+                _ => ProcessAction.Proxy,
+            };
+            _vm.Processes.SetAction(item, action);
+        }
+    }
+
+    // ---- Shared dialog flows ------------------------------------------------------
+
+    /// <summary>
+    /// Shared edit-node flow used by both the toolbar button and the context menu.
+    /// </summary>
+    private async Task ShowEditNodeDialog(ProxyNode node)
+    {
+        var dialog = new EditNodeDialog(node) { XamlRoot = Content.XamlRoot };
+        var result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var edited = dialog.Node;
+        node.Name = edited.Name;
+        node.Type = edited.Type;
+        node.Address = edited.Address;
+        node.Port = edited.Port;
+        node.ExtraParams = edited.ExtraParams;
+
+        _vm.SaveSettings();
+        RefreshNodeCards();
     }
 
     // ---- Helpers ------------------------------------------------------------------

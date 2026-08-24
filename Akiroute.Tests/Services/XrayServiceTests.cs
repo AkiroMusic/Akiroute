@@ -95,24 +95,26 @@ public class XrayServiceTests : IDisposable
     }
 
     [Fact]
-    public void AppendLogLine_RingBufferKeepsLast20InOrder()
+    public void AppendLogLine_RingBufferKeepsLastCapacityInOrder()
     {
         // Arrange: a service fed through the internal log-append path.
         using var service = new XrayService();
         var received = 0;
         service.LogReceived += (_, _) => received++;
+        var capacity = XrayService.LogRingCapacity;
+        var total = capacity + 25; // push past capacity so the oldest are dropped.
 
-        // Act: push 25 lines through the ring buffer.
-        for (var i = 1; i <= 25; i++)
+        // Act: push more lines than the ring can hold.
+        for (var i = 1; i <= total; i++)
         {
             service.AppendLogLine($"line {i}");
         }
 
-        // Assert: exactly 20 retained, oldest dropped, order preserved.
-        Assert.Equal(20, service.RecentLogs.Count);
-        Assert.Equal("line 6", service.RecentLogs[0]);
-        Assert.Equal("line 25", service.RecentLogs[^1]);
-        Assert.Equal(25, received);
+        // Assert: exactly `capacity` retained, oldest dropped, order preserved.
+        Assert.Equal(capacity, service.RecentLogs.Count);
+        Assert.Equal($"line {total - capacity + 1}", service.RecentLogs[0]);
+        Assert.Equal($"line {total}", service.RecentLogs[^1]);
+        Assert.Equal(total, received);
     }
 
     [Fact]

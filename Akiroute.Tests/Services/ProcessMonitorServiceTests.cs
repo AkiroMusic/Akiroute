@@ -215,4 +215,49 @@ public class ProcessMonitorServiceTests
 
         public void Dispose() => Disposed = true;
     }
+
+    /// <summary>
+    /// Verifies that the icon cache evicts entries for processes that disappear
+    /// between scans. Currently RED: GetCurrentProcesses removes vanished paths
+    /// from _items but does not clean up _iconCache, so B's icon remains cached.
+    /// </summary>
+    [Fact]
+    public void IconCache_EvictsEntries_ForDeadProcesses()
+    {
+        // Arrange: two process records. Seed the icon cache for both via the
+        // internal test seam (real extraction is WinUI-bound).
+        const string pathA = @"C:\Program Files\AppA\a.exe";
+        const string pathB = @"C:\Program Files\AppB\b.exe";
+
+        var records = new List<ProcessMonitorService.ProcessRecord>
+        {
+            new(1, "a.exe", pathA, HasWindow: true),
+            new(2, "b.exe", pathB, HasWindow: true),
+        };
+        var service = new ProcessMonitorService(() => records);
+
+        // Seed icons for both processes.
+        var iconA = new object();
+        var iconB = new object();
+        service.SetCachedIcon(pathA, iconA);
+        service.SetCachedIcon(pathB, iconB);
+
+        // Act: first scan — both present.
+        var first = service.GetCurrentProcesses();
+        Assert.Equal(2, first.Count);
+
+        // Second scan — only A remains; B has vanished.
+        records.Clear();
+        records.Add(new ProcessMonitorService.ProcessRecord(1, "a.exe", pathA, HasWindow: true));
+        var second = service.GetCurrentProcesses();
+
+        // Assert: A's item is present, B's item is gone from _items.
+        Assert.Single(second);
+        Assert.Equal(pathA, second[0].Path);
+
+        // Assert (RED): B's icon should have been evicted from the cache, but
+        // currently it is not — GetCurrentProcesses only removes from _items.
+        Assert.Null(service.GetCachedIcon(pathB));
+        Assert.Same(iconA, service.GetCachedIcon(pathA));
+    }
 }

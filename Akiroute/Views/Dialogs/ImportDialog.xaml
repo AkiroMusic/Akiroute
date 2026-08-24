@@ -6,9 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="导入节点"
-    PrimaryButtonText="导入"
-    CloseButtonText="取消"
+    x:Uid="ImportDlg"
     DefaultButton="Primary"
     IsPrimaryButtonEnabled="False">
 
@@ -17,12 +15,12 @@
         <StackPanel Orientation="Horizontal" Spacing="8">
             <RadioButton
                 x:Name="LinkMode"
-                Content="粘贴链接"
+                x:Uid="ImportLinkMode"
                 GroupName="ImportMode"
                 Checked="Mode_Checked" />
             <RadioButton
                 x:Name="UrlMode"
-                Content="订阅地址"
+                x:Uid="ImportUrlMode"
                 GroupName="ImportMode"
                 Checked="Mode_Checked" />
         </StackPanel>
@@ -32,12 +30,12 @@
             Height="140"
             AcceptsReturn="True"
             TextWrapping="Wrap"
-            PlaceholderText="粘贴 vless://, vmess://, ss://, trojan://, hysteria2://, tuic:// 链接或 Clash 配置"
+            x:Uid="ImportPasteBox"
             TextChanged="Input_TextChanged" />
 
         <TextBox
             x:Name="UrlBox"
-            PlaceholderText="https:// 订阅地址"
+            x:Uid="ImportUrlBox"
             Visibility="Collapsed"
             TextChanged="Input_TextChanged" />
     </StackPanel>

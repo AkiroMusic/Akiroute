@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.UI.Dispatching;
 
 namespace Akiroute.Helpers;
@@ -38,6 +39,14 @@ public static class DispatcherHelper
             return;
         }
 
-        queue.TryEnqueue(() => action());
+        // Capture the enqueue result; when the dispatcher queue is shutting down
+        // TryEnqueue returns false. The enqueued actions are lightweight UI property
+        // updates (SetProperty on ObservableObject), so running them inline is safe
+        // and avoids silently dropping state transitions during shutdown.
+        if (!queue.TryEnqueue(() => action()))
+        {
+            Debug.WriteLine("[DispatcherHelper] TryEnqueue failed (queue shutting down); executing action inline.");
+            action();
+        }
     }
 }

@@ -25,6 +25,16 @@ public partial class NodeListViewModel : ObservableObject
     private readonly PingService _ping;
     private readonly Action<Action> _runOnUiThread;
 
+    /// <summary>Shared <see cref="HttpClient"/> for subscription fetches — avoids
+    /// socket exhaustion from per-request disposal (D6).</summary>
+    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
+
+    /// <summary>
+    /// Test seam: when non-null, subscription fetches use this delegate instead of
+    /// <see cref="SharedHttpClient"/>. Set to <c>null</c> in test teardown.
+    /// </summary>
+    internal Func<Uri, CancellationToken, Task<string>>? SubscriptionFetchOverrideForTests { get; set; }
+
     /// <summary>Serializes access to <see cref="_allNodes"/>.</summary>
     private readonly object _nodesGate = new();
 
@@ -34,6 +44,7 @@ public partial class NodeListViewModel : ObservableObject
     private ProxyNode? _selectedNode;
     private string? _searchText;
     private bool _isPinging;
+    private DateTimeOffset? _lastAutoPingAt;
     private string? _importError;
 
     /// <summary>Bound by the node ListView; refreshed by <see cref="ApplyFilter"/>.</summary>
@@ -77,8 +88,9 @@ public partial class NodeListViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Raised after a link or subscription import appended at least one node. The
-    /// App layer hooks this to persist <see cref="AppSettings.Nodes"/>.
+    /// Raised after any node-list mutation that should be persisted — import
+    /// (link / subscription / Clash) AND deletion. The App layer hooks this to
+    /// persist <see cref="AppSettings.Nodes"/>.
     /// </summary>
     public event EventHandler? NodesImported;
 
@@ -145,6 +157,68 @@ public partial class NodeListViewModel : ObservableObject
         }
 
         _runOnUiThread(ApplyFilter);
+    }
+
+    /// <summary>
+    /// Removes a node from the repository and persists the change. If the removed
+    /// node was the active selection, the selection moves to the next available node
+    /// (or clears when the list is empty). Uses reference equality to locate the
+    /// exact instance.
+    /// </summary>
+    /// <param name="node">The node to remove.</param>
+    [RelayCommand]
+    private void DeleteNode(ProxyNode node)
+    {
+        if (node is null)
+        {
+            return;
+        }
+
+        lock (_nodesGate)
+        {
+            // Capture the position BEFORE removal so the selection can fall to
+            // the adjacent (same-index) node afterwards.
+            var removedIndex = _allNodes.IndexOf(node);
+            var removed = removedIndex >= 0 && _allNodes.Remove(node);
+            if (!removed)
+            {
+                return;
+            }
+
+            Settings.Nodes.Remove(node);
+
+            // Update selection if the deleted node was selected: prefer the
+            // adjacent (same-index) node so focus "stays in place" instead of
+            // jumping to the top of the list.
+            if (ReferenceEquals(SelectedNode, node))
+            {
+                ProxyNode? next = null;
+                if (_allNodes.Count > 0)
+                {
+                    var idx = Math.Clamp(removedIndex, 0, _allNodes.Count - 1);
+                    next = _allNodes[idx];
+                }
+
+                foreach (var candidate in _allNodes)
+                {
+                    candidate.IsSelected = false;
+                }
+
+                if (next is not null)
+                {
+                    next.IsSelected = true;
+                }
+
+                SelectedNode = next;
+                Settings.SelectedNodeId = next?.Id ?? "";
+            }
+        }
+
+        _runOnUiThread(() =>
+        {
+            ApplyFilter();
+            NodesImported?.Invoke(this, EventArgs.Empty);
+        });
     }
 
     /// <summary>
@@ -230,30 +304,276 @@ public partial class NodeListViewModel : ObservableObject
             || !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            ImportError = "订阅地址无效";
+            ImportError = Loc.Get("Error.SubUrlInvalid");
             return;
         }
 
         string content;
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            content = await client.GetStringAsync(uri, cancellationToken).ConfigureAwait(false);
+            content = SubscriptionFetchOverrideForTests is not null
+                ? await SubscriptionFetchOverrideForTests(uri, cancellationToken).ConfigureAwait(false)
+                : await SharedHttpClient.GetStringAsync(uri, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException or IOException)
         {
-            ImportError = $"订阅获取失败: {ex.Message}";
+            ImportError = string.Format(Loc.Get("Error.SubFetchFailed"), ex.Message);
             return;
         }
 
         var imported = NodeLinkParser.Parse(content);
         if (imported.Count == 0)
         {
-            ImportError = "未解析到任何节点";
+            imported.AddRange(ClashConfigParser.Parse(content));
+        }
+
+        if (imported.Count == 0)
+        {
+            ImportError = Loc.Get("Error.SubNoNodesParsed");
             return;
         }
 
+        // Upsert subscription entry: match by trimmed URL (case-insensitive).
+        var trimmedUrl = url.Trim();
+        SubscriptionEntry entry;
+        lock (_nodesGate)
+        {
+            entry = Settings.Subscriptions.Find(
+                           s => string.Equals(s.Url?.Trim(), trimmedUrl, StringComparison.OrdinalIgnoreCase))
+                       ?? new SubscriptionEntry
+                       {
+                           Id = Guid.NewGuid().ToString("N"),
+                           Name = uri.Host,
+                           Url = trimmedUrl,
+                       };
+
+            if (!Settings.Subscriptions.Contains(entry))
+            {
+                Settings.Subscriptions.Add(entry);
+            }
+
+            entry.LastUpdated = DateTimeOffset.Now;
+        }
+
+        // Tag every parsed node with the subscription id before dedup/add.
+        foreach (var node in imported)
+        {
+            node.SourceSubscriptionId = entry.Id;
+        }
+
         AddImported(imported);
+    }
+
+    /// <summary>
+    /// Re-fetches the subscription feed for <paramref name="entry"/> and
+    /// replaces the stale nodes (those tagged with
+    /// <see cref="ProxyNode.SourceSubscriptionId"/> matching
+    /// <see cref="SubscriptionEntry.Id"/>) with the fresh parse result.
+    /// Nodes from other sources (manual imports, other subscriptions) are
+    /// never touched.
+    /// </summary>
+    /// <param name="entry">The subscription to update.</param>
+    /// <param name="cancellationToken">Cancels the in-flight fetch.</param>
+    /// <returns>
+    /// Human-readable summary on success (e.g. "订阅已更新：新增 2，移除 1")
+    /// or a failure description. On failure the node list and
+    /// <see cref="SubscriptionEntry.LastUpdated"/> are left untouched.
+    /// </returns>
+    public async Task<string> UpdateSubscriptionAsync(SubscriptionEntry entry, CancellationToken cancellationToken = default)
+    {
+        // ── Validate ──────────────────────────────────────────────────
+        if (entry is null
+            || string.IsNullOrWhiteSpace(entry.Url)
+            || !Uri.TryCreate(entry.Url.Trim(), UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            AppLogger.Warn("subscription update failed — invalid url");
+            return Loc.Get("Error.SubUrlInvalid");
+        }
+
+        // ── Fetch ─────────────────────────────────────────────────────
+        string content;
+        try
+        {
+            content = SubscriptionFetchOverrideForTests is not null
+                ? await SubscriptionFetchOverrideForTests(uri, cancellationToken).ConfigureAwait(false)
+                : await SharedHttpClient.GetStringAsync(uri, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException or IOException)
+        {
+            AppLogger.Warn($"subscription update failed url={entry.Url} error={ex.Message}");
+            return string.Format(Loc.Get("Error.SubFetchFailed"), ex.Message);
+        }
+
+        // ── Parse ─────────────────────────────────────────────────────
+        var fresh = NodeLinkParser.Parse(content);
+        if (fresh.Count == 0)
+        {
+            fresh.AddRange(ClashConfigParser.Parse(content));
+        }
+
+        if (fresh.Count == 0)
+        {
+            AppLogger.Warn($"subscription update parsed 0 nodes url={entry.Url}");
+            return Loc.Get("Error.SubNoNodesParsedShort");
+        }
+
+        // ── Replace-on-update under _nodesGate ────────────────────────
+        //
+        // Threading rationale: _allNodes and Settings.Nodes are plain
+        // List<ProxyNode> — safe to mutate under _nodesGate from any
+        // thread. Observable mutations on Nodes (the ObservableCollection
+        // bound to the UI) must happen on the UI thread. We follow the
+        // same split used by AddImported: perform all List mutations
+        // under the lock, collect results (added/removed counts,
+        // selection-lost flag), then marshal ApplyFilter + property
+        // writes + event raise through _runOnUiThread. This avoids
+        // blocking the caller thread on UI dispatch and keeps the lock
+        // critical section short.
+        int added;
+        int removed;
+        bool selectionLost;
+
+        lock (_nodesGate)
+        {
+            var entryId = entry.Id;
+
+            // Tag fresh nodes with this subscription's id.
+            foreach (var node in fresh)
+            {
+                node.SourceSubscriptionId = entryId;
+            }
+
+            // Keys of nodes that should survive after the update.
+            var freshKeys = new HashSet<string>(
+                fresh.Select(static n => NodeKey(n)),
+                StringComparer.OrdinalIgnoreCase);
+
+            // Snapshot existing nodes owned by this subscription.
+            var toRemove = _allNodes
+                .Where(n => string.Equals(n.SourceSubscriptionId, entryId, StringComparison.Ordinal)
+                            && !freshKeys.Contains(NodeKey(n)))
+                .ToList();
+
+            // Snapshot fresh nodes not already present (by dedup key).
+            var existingKeys = new HashSet<string>(
+                _allNodes.Select(static n => NodeKey(n)),
+                StringComparer.OrdinalIgnoreCase);
+            var toAdd = fresh.Where(n => !existingKeys.Contains(NodeKey(n))).ToList();
+
+            // Check if the currently selected node is about to be removed.
+            selectionLost = toRemove.Any(n => ReferenceEquals(SelectedNode, n));
+
+            // Apply removals to both lists.
+            removed = 0;
+            foreach (var node in toRemove)
+            {
+                if (_allNodes.Remove(node))
+                {
+                    Settings.Nodes.Remove(node);
+                    removed++;
+                }
+            }
+
+            // Apply additions to both lists.
+            added = 0;
+            foreach (var node in toAdd)
+            {
+                _allNodes.Add(node);
+                Settings.Nodes.Add(node);
+                added++;
+            }
+
+            entry.LastUpdated = DateTimeOffset.Now;
+        }
+
+        // ── UI-thread mutations ───────────────────────────────────────
+        if (added + removed > 0)
+        {
+            _runOnUiThread(() =>
+            {
+                ApplyFilter();
+
+                // Clear selection on UI thread if the selected node was removed.
+                if (selectionLost)
+                {
+                    SelectedNode = null;
+                    Settings.SelectedNodeId = "";
+                }
+
+                NodesImported?.Invoke(this, EventArgs.Empty);
+            });
+        }
+
+        AppLogger.Info($"subscription updated url={entry.Url} added={added} removed={removed}");
+        return string.Format(Loc.Get("Info.SubUpdated"), added, removed);
+    }
+
+    /// <summary>
+    /// Determines whether an automatic update should run based on the current
+    /// time, the last successful update, and the effective interval.
+    /// </summary>
+    /// <param name="now">Current timestamp (injected for determinism).</param>
+    /// <param name="lastUpdated">Time of the last successful update; null = never.</param>
+    /// <param name="effectiveIntervalMinutes">
+    /// Minutes between updates; ≤ 0 means auto-update is disabled.
+    /// </param>
+    /// <returns><c>true</c> when an update is due.</returns>
+    internal static bool ShouldRunUpdate(DateTimeOffset now, DateTimeOffset? lastUpdated, int effectiveIntervalMinutes)
+    {
+        if (effectiveIntervalMinutes <= 0)
+        {
+            return false;
+        }
+
+        return lastUpdated is null || (now - lastUpdated.Value).TotalMinutes >= effectiveIntervalMinutes;
+    }
+
+    /// <summary>
+    /// Returns the effective auto-update interval for a subscription: the
+    /// per-subscription value when positive, otherwise the global setting.
+    /// </summary>
+    /// <param name="entry">The subscription entry to query.</param>
+    /// <returns>Minutes between updates; ≤ 0 means disabled.</returns>
+    public int GetEffectiveIntervalMinutes(SubscriptionEntry entry) =>
+        entry.AutoUpdateMinutes > 0 ? entry.AutoUpdateMinutes : Settings.SubscriptionAutoUpdateMinutes;
+
+    /// <summary>
+    /// Determines whether an automatic ping should run based on the current
+    /// time, the last successful ping, and the effective interval.
+    /// </summary>
+    /// <param name="now">Current timestamp (injected for determinism).</param>
+    /// <param name="lastPingAt">Time of the last successful ping; null = never.</param>
+    /// <param name="intervalMinutes">
+    /// Minutes between pings; ≤ 0 means auto-ping is disabled.
+    /// </param>
+    /// <returns><c>true</c> when a ping is due.</returns>
+    internal static bool ShouldRunPing(DateTimeOffset now, DateTimeOffset? lastPingAt, int intervalMinutes)
+    {
+        if (intervalMinutes <= 0)
+        {
+            return false;
+        }
+
+        return lastPingAt is null || (now - lastPingAt.Value).TotalMinutes >= intervalMinutes;
+    }
+
+    /// <summary>
+    /// Triggers a ping sweep when the auto-ping interval has elapsed since the
+    /// last run. The decision is purely time-based (no logging — badges are the
+    /// feedback surface).
+    /// </summary>
+    /// <param name="now">Current timestamp (injected for determinism).</param>
+    public async Task RunAutoPingIfDueAsync(DateTimeOffset now)
+    {
+        var interval = Settings.AutoPingMinutes;
+        if (!ShouldRunPing(now, _lastAutoPingAt, interval) || IsPinging)
+        {
+            return;
+        }
+
+        _lastAutoPingAt = now;
+        await PingAllAsync().ConfigureAwait(true);
     }
 
     /// <summary>Parses pasted text into nodes; returns null when nothing was added.</summary>
@@ -311,7 +631,7 @@ public partial class NodeListViewModel : ObservableObject
             NodesImported?.Invoke(this, EventArgs.Empty);
         });
 
-        return $"已导入 {added} 个节点";
+        return string.Format(Loc.Get("Info.ImportedNodes"), added);
     }
 
     /// <summary>Replaces <see cref="Nodes"/> with the search-matching subset of the repository.</summary>

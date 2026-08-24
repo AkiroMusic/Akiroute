@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using System.Threading;
 using Akiroute.Models;
 using Akiroute.Services;
 
@@ -163,5 +164,56 @@ public class SettingsServiceTests : IDisposable
     {
         // Act + Assert: a null settings document is a programmer error.
         Assert.Throws<ArgumentNullException>(() => SettingsService.Save(null!, ConfigPath));
+    }
+
+    /// <summary>
+    /// Concurrent stress test: 8 parallel tasks each perform 50 iterations of
+    /// mutate-field → Save → Load → assert persisted. No exceptions should escape;
+    /// the final Load must succeed and reflect a valid state (last-writer-wins
+    /// since Save serializes via a static lock).
+    /// </summary>
+    [Fact]
+    public void Save_Load_Concurrent_Stress()
+    {
+        const int taskCount = 8;
+        const int iterationsPerTask = 50;
+        var barrier = new System.Threading.Barrier(taskCount);
+
+        var exceptions = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+
+        Parallel.For(0, taskCount, new ParallelOptions { MaxDegreeOfParallelism = taskCount }, taskIndex =>
+        {
+            barrier.SignalAndWait();
+
+            for (var i = 0; i < iterationsPerTask; i++)
+            {
+                try
+                {
+                    var settings = new AppSettings
+                    {
+                        Port = 1024 + (taskIndex * iterationsPerTask + i),
+                        Mode = ProxyMode.Global,
+                    };
+
+                    SettingsService.Save(settings, ConfigPath);
+                    var loaded = SettingsService.Load(ConfigPath);
+
+                    Assert.NotNull(loaded);
+                    Assert.True(loaded.Port >= 1024, $"Port should be >= 1024, got {loaded.Port}");
+                }
+                catch (Exception ex)
+                {
+                    exceptions.Add(ex);
+                }
+            }
+        });
+
+        // Assert: no exceptions escaped during concurrent writes.
+        Assert.Empty(exceptions);
+
+        // Assert: final Load succeeds and returns valid settings.
+        var final = SettingsService.Load(ConfigPath);
+        Assert.NotNull(final);
+        Assert.True(final.Port >= 1024, $"Final port should be >= 1024, got {final.Port}");
     }
 }

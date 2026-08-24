@@ -18,13 +18,11 @@
             <Setter Property="Foreground" Value="{ThemeResource EtTextSecondaryBrush}" />
             <Setter Property="MinHeight" Value="26" />
             <Setter Property="Margin" Value="2" />
+            <Setter Property="UseSystemFocusVisuals" Value="False" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border
-                            x:Name="SegmentRoot"
-                            CornerRadius="6"
-                            Background="Transparent">
+                        <Grid>
                             <VisualStateManager.VisualStateGroups>
                                 <VisualStateGroup x:Name="CommonStates">
                                     <VisualStateGroup.Transitions>
@@ -34,11 +32,15 @@
                                     <VisualState x:Name="PointerOver">
                                         <VisualState.Setters>
                                             <Setter Target="SegmentRoot.Background" Value="{ThemeResource EtTextPrimary6Brush}" />
+                                            <Setter Target="FocusOuter.BorderBrush" Value="Transparent" />
+                                            <Setter Target="FocusInner.BorderBrush" Value="Transparent" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Pressed">
                                         <VisualState.Setters>
                                             <Setter Target="SegmentRoot.Background" Value="{ThemeResource EtTextPrimary6Brush}" />
+                                            <Setter Target="FocusOuter.BorderBrush" Value="Transparent" />
+                                            <Setter Target="FocusInner.BorderBrush" Value="Transparent" />
                                         </VisualState.Setters>
                                     </VisualState>
                                 </VisualStateGroup>
@@ -49,21 +51,45 @@
                                     <VisualState x:Name="Checked">
                                         <VisualState.Setters>
                                             <Setter Target="SegmentRoot.Background" Value="{ThemeResource EtAccentBrush}" />
-                                            <Setter Target="SegmentText.Foreground" Value="White" />
+                                            <Setter Target="SegmentText.Foreground" Value="{ThemeResource EtTextOnAccentBrush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Unchecked" />
                                 </VisualStateGroup>
+                                <!-- Keyboard focus: 2px double-ring; collapses on PointerOver/Pressed -->
+                                <VisualStateGroup x:Name="FocusStates">
+                                    <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:0.15" />
+                                    </VisualStateGroup.Transitions>
+                                    <VisualState x:Name="Unfocused" />
+                                    <VisualState x:Name="Focused">
+                                        <VisualState.Setters>
+                                            <Setter Target="FocusOuter.BorderBrush" Value="{ThemeResource FocusVisualPrimaryBrush}" />
+                                            <Setter Target="FocusInner.BorderBrush" Value="{ThemeResource FocusVisualSecondaryBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
                             </VisualStateManager.VisualStateGroups>
-                            <ContentPresenter
-                                x:Name="SegmentText"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Content="{TemplateBinding Content}"
-                                FontSize="12"
-                                FontWeight="SemiBold"
-                                Foreground="{ThemeResource EtTextSecondaryBrush}" />
-                        </Border>
+                            <Border
+                                x:Name="SegmentRoot"
+                                CornerRadius="6"
+                                Background="Transparent">
+                                <ContentPresenter
+                                    x:Name="SegmentText"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Content}"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ThemeResource EtTextSecondaryBrush}" />
+                            </Border>
+                            <Border x:Name="FocusOuter" BorderThickness="2" BorderBrush="Transparent"
+                                    CornerRadius="6" Margin="-3"
+                                    IsHitTestVisible="False" />
+                            <Border x:Name="FocusInner" BorderThickness="1" BorderBrush="Transparent"
+                                    CornerRadius="6" Margin="-1"
+                                    IsHitTestVisible="False" />
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -211,21 +237,21 @@
                         <RadioButton
                             x:Name="ProxySegment"
                             Grid.Column="0"
-                            Content="代理"
+                            x:Uid="ProcSegmentProxy"
                             Tag="Proxy"
                             Style="{StaticResource SegmentRadioButtonStyle}"
                             Checked="Segment_Checked" />
                         <RadioButton
                             x:Name="DirectSegment"
                             Grid.Column="1"
-                            Content="直连"
+                            x:Uid="ProcSegmentDirect"
                             Tag="Direct"
                             Style="{StaticResource SegmentRadioButtonStyle}"
                             Checked="Segment_Checked" />
                         <RadioButton
                             x:Name="BlockSegment"
                             Grid.Column="2"
-                            Content="阻止"
+                            x:Uid="ProcSegmentBlock"
                             Tag="Block"
                             Style="{StaticResource SegmentRadioButtonStyle}"
                             Checked="Segment_Checked" />

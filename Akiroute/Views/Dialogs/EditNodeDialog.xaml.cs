@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Akiroute.Helpers;
 using Akiroute.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -93,24 +94,24 @@ public sealed partial class EditNodeDialog : ContentDialog
     {
         if (string.IsNullOrWhiteSpace(NameBox.Text))
         {
-            return "名称不能为空";
+            return Loc.Get("EditNodeValidation.NameEmpty");
         }
 
         if (string.IsNullOrWhiteSpace(AddressBox.Text))
         {
-            return "地址不能为空";
+            return Loc.Get("EditNodeValidation.AddressEmpty");
         }
 
         if (!int.TryParse(PortBox.Text.Trim(), out int port) || port is < 1 or > 65535)
         {
-            return "端口必须是 1 - 65535 之间的整数";
+            return Loc.Get("EditNodeValidation.PortInvalid");
         }
 
         _validatedPort = port;
 
         if (!TryParseExtraParams(ExtraParamsBox.Text, out _))
         {
-            return "高级参数必须是有效的 JSON 对象";
+            return Loc.Get("EditNodeValidation.ExtraInvalid");
         }
 
         return null;

@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ======================== Navigation Rail ======================== -->
+  <data name="NavNodesLabel.Text" xml:space="preserve">
+    <value>Nodes</value>
+  </data>
+  <data name="NavProcessesLabel.Text" xml:space="preserve">
+    <value>Processes</value>
+  </data>
+  <data name="NavLogsLabel.Text" xml:space="preserve">
+    <value>Logs</value>
+  </data>
+  <data name="NavSettingsLabel.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+
+  <!-- ======================== Nodes Page ======================== -->
+  <data name="NodesPageTitle.Text" xml:space="preserve">
+    <value>Nodes</value>
+  </data>
+  <data name="NodesPageSubtitle.Text" xml:space="preserve">
+    <value>Node Management</value>
+  </data>
+  <data name="NodesSearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search nodes</value>
+  </data>
+  <data name="NodesPingBtn.Text" xml:space="preserve">
+    <value>Speed Test</value>
+  </data>
+  <data name="NodesImportBtn.Text" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="NodesEditBtn.Text" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="NodesEmptyLine1.Text" xml:space="preserve">
+    <value>No nodes yet</value>
+  </data>
+  <data name="NodesEmptyLine2.Text" xml:space="preserve">
+    <value>Click "Import" to add</value>
+  </data>
+  <data name="NodeCtxEdit.Text" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="NodeCtxDelete.Text" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="NodeCtxCopyAddr.Text" xml:space="preserve">
+    <value>Copy Address</value>
+  </data>
+  <data name="NodeCtxCopyLink.Text" xml:space="preserve">
+    <value>Copy Link</value>
+  </data>
+
+  <!-- ======================== Traffic Chart ======================== -->
+  <data name="TrafficTitle.Text" xml:space="preserve">
+    <value>Real-time Traffic</value>
+  </data>
+  <data name="TrafficEmptyHint.Text" xml:space="preserve">
+    <value>No Data</value>
+  </data>
+
+  <!-- ======================== Processes Page ======================== -->
+  <data name="ProcessesTitle.Text" xml:space="preserve">
+    <value>Process Routing</value>
+  </data>
+  <data name="ProcessesSubtitle.Text" xml:space="preserve">
+    <value>Choose proxy path per process</value>
+  </data>
+  <data name="ProcessesRefreshBtn.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="ProcessesEmptyHint.Text" xml:space="preserve">
+    <value>No routable processes found</value>
+  </data>
+  <data name="ProcessCtxProxy.Text" xml:space="preserve">
+    <value>Use Proxy</value>
+  </data>
+  <data name="ProcessCtxDirect.Text" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="ProcessCtxBlock.Text" xml:space="preserve">
+    <value>Block</value>
+  </data>
+  <data name="ProcSegmentProxy.Content" xml:space="preserve">
+    <value>Proxy</value>
+  </data>
+  <data name="ProcSegmentDirect.Content" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="ProcSegmentBlock.Content" xml:space="preserve">
+    <value>Block</value>
+  </data>
+
+  <!-- ======================== Logs Page ======================== -->
+  <data name="AppLogTitle.Text" xml:space="preserve">
+    <value>App Log</value>
+  </data>
+  <data name="AppLogCopyBtn.Text" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="AppLogRefreshBtn.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="EngineLogTitle.Text" xml:space="preserve">
+    <value>Engine Log</value>
+  </data>
+  <data name="EngineLogCopyBtn.Text" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="EngineLogRefreshBtn.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+
+  <!-- ======================== Settings Page ======================== -->
+  <data name="SettingsTitle.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsSubtitle.Text" xml:space="preserve">
+    <value>Routing, appearance &amp; update preferences</value>
+  </data>
+  <data name="SettingsProxyLabel.Text" xml:space="preserve">
+    <value>Proxy</value>
+  </data>
+  <data name="SettingsRoutingMode.Text" xml:space="preserve">
+    <value>Routing Mode</value>
+  </data>
+  <data name="SettingsModeGlobal.Content" xml:space="preserve">
+    <value>Global</value>
+  </data>
+  <data name="SettingsModeRule.Content" xml:space="preserve">
+    <value>Rule</value>
+  </data>
+  <data name="SettingsModeDirectOnly.Content" xml:space="preserve">
+    <value>Direct Only</value>
+  </data>
+  <data name="SettingsModeProcessOnly.Content" xml:space="preserve">
+    <value>Process Only</value>
+  </data>
+  <data name="SettingsLocalPort.Text" xml:space="preserve">
+    <value>Local Port</value>
+  </data>
+  <data name="SettingsAutoConnect.Header" xml:space="preserve">
+    <value>Auto-connect on startup</value>
+  </data>
+  <data name="SettingsAutoConnect.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="SettingsAutoConnect.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="SettingsTun.Header" xml:space="preserve">
+    <value>Enable TUN Mode</value>
+  </data>
+  <data name="SettingsTun.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="SettingsTun.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="SettingsAppearanceLabel.Text" xml:space="preserve">
+    <value>Appearance &amp; Updates</value>
+  </data>
+  <data name="SettingsTheme.Text" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="SettingsThemeSystem.Content" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="SettingsThemeDark.Content" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="SettingsThemeLight.Content" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="SettingsSubAutoUpdate.Text" xml:space="preserve">
+    <value>Subscription Auto-update (min)</value>
+  </data>
+  <data name="SettingsAutoPing.Text" xml:space="preserve">
+    <value>Auto Ping (min)</value>
+  </data>
+  <data name="SettingsSubscriptionsLabel.Text" xml:space="preserve">
+    <value>Subscriptions</value>
+  </data>
+  <data name="SubsEmptyLine1.Text" xml:space="preserve">
+    <value>No subscriptions</value>
+  </data>
+  <data name="SubsEmptyLine2.Text" xml:space="preserve">
+    <value>Add via "Import"</value>
+  </data>
+  <data name="SettingsBackupBtn.Text" xml:space="preserve">
+    <value>Backup Config</value>
+  </data>
+  <data name="SettingsRestoreBtn.Text" xml:space="preserve">
+    <value>Restore Config</value>
+  </data>
+  <data name="SettingsSaveBtn.Content" xml:space="preserve">
+    <value>Save Settings</value>
+  </data>
+
+  <!-- ======================== Footer ======================== -->
+  <data name="FooterCopyright.Text" xml:space="preserve">
+    <value>© 2026 Akiro · For learning and communication only</value>
+  </data>
+  <data name="FooterVersionTooltip.Text" xml:space="preserve">
+    <value>Akiroute v0.1.1&#x0a;Copyright © 2026 Akiro. All rights reserved.&#x0a;For learning and communication only. No commercial use, copying, or redistribution.&#x0a;Akiroute v0.1.1 — All rights reserved. For learning and communication only. No commercial use, copying, or redistribution.</value>
+  </data>
+
+  <!-- ======================== Status Header ======================== -->
+  <data name="StatusToggleBtn.Text" xml:space="preserve">
+    <value>Start</value>
+  </data>
+
+  <!-- ======================== Node Card ======================== -->
+  <data name="NodeCardUntested.Text" xml:space="preserve">
+    <value>Untested</value>
+  </data>
+  <data name="NodeCardLatencyUntested" xml:space="preserve">
+    <value>Untested</value>
+  </data>
+
+  <!-- ======================== Edit Node Dialog ======================== -->
+  <data name="EditNodeDlg.Title" xml:space="preserve">
+    <value>Edit Node</value>
+  </data>
+  <data name="EditNodeDlg.PrimaryButtonText" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="EditNodeDlg.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="EditNodeName.Header" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="EditNodeName.PlaceholderText" xml:space="preserve">
+    <value>Node display name</value>
+  </data>
+  <data name="EditNodeType.Header" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="EditNodeType.PlaceholderText" xml:space="preserve">
+    <value>Protocol type</value>
+  </data>
+  <data name="EditNodeAddr.Header" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="EditNodeAddr.PlaceholderText" xml:space="preserve">
+    <value>Server hostname or IP</value>
+  </data>
+  <data name="EditNodePort.Header" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="EditNodeExtra.Header" xml:space="preserve">
+    <value>Advanced Parameters (ExtraParams)</value>
+  </data>
+
+  <!-- ======================== Import Dialog ======================== -->
+  <data name="ImportDlg.Title" xml:space="preserve">
+    <value>Import Nodes</value>
+  </data>
+  <data name="ImportDlg.PrimaryButtonText" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="ImportDlg.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ImportLinkMode.Content" xml:space="preserve">
+    <value>Paste Link</value>
+  </data>
+  <data name="ImportUrlMode.Content" xml:space="preserve">
+    <value>Subscription URL</value>
+  </data>
+  <data name="ImportPasteBox.PlaceholderText" xml:space="preserve">
+    <value>Paste vless://, vmess://, ss://, trojan://, hysteria2://, tuic:// links, Base64 subscription body, or Clash config</value>
+  </data>
+  <data name="ImportUrlBox.PlaceholderText" xml:space="preserve">
+    <value>https:// subscription URL</value>
+  </data>
+
+  <!-- ======================== Code-behind / ViewModel Strings (Loc.Get keys) ======================== -->
+
+  <!-- Status messages (ProxyStatusViewModel) -->
+  <data name="Status.ToggleStart" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="Status.ToggleStop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Status.StartFailed" xml:space="preserve">
+    <value>Start Failed</value>
+  </data>
+  <data name="Status.NoNodeSelected" xml:space="preserve">
+    <value>No node selected</value>
+  </data>
+  <data name="Status.ConnectFailed" xml:space="preserve">
+    <value>Connection Failed</value>
+  </data>
+  <data name="Status.Connecting" xml:space="preserve">
+    <value>Connecting…</value>
+  </data>
+  <data name="Status.ConnectedPort" xml:space="preserve">
+    <value>Connected · Port {0}</value>
+  </data>
+  <data name="Status.Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Status.Disconnected" xml:space="preserve">
+    <value>Not Connected</value>
+  </data>
+
+  <!-- Error messages (NodeListViewModel) -->
+  <data name="Error.SubUrlInvalid" xml:space="preserve">
+    <value>Invalid subscription URL</value>
+  </data>
+  <data name="Error.SubFetchFailed" xml:space="preserve">
+    <value>Subscription fetch failed: {0}</value>
+  </data>
+  <data name="Error.SubNoNodesParsed" xml:space="preserve">
+    <value>No nodes parsed: subscription content is not a valid node link, Base64 subscription body, or Clash config</value>
+  </data>
+  <data name="Error.SubNoNodesParsedShort" xml:space="preserve">
+    <value>No nodes parsed</value>
+  </data>
+
+  <!-- Info messages (NodeListViewModel) -->
+  <data name="Info.SubUpdated" xml:space="preserve">
+    <value>Subscription updated: {0} added, {1} removed</value>
+  </data>
+  <data name="Info.ImportedNodes" xml:space="preserve">
+    <value>{0} nodes imported</value>
+  </data>
+
+  <!-- MainWindow code-behind dialog strings -->
+  <data name="Error.PleaseSelectNode" xml:space="preserve">
+    <value>Please select a node first</value>
+  </data>
+  <data name="Dialog.BackupSuccess" xml:space="preserve">
+    <value>Backup Saved</value>
+  </data>
+  <data name="Dialog.BackupSuccessDetail" xml:space="preserve">
+    <value>Config exported to: {0}</value>
+  </data>
+  <data name="Dialog.BackupFail" xml:space="preserve">
+    <value>Backup Failed</value>
+  </data>
+  <data name="Dialog.RestoreFail" xml:space="preserve">
+    <value>Restore Failed</value>
+  </data>
+  <data name="Dialog.RestoreFailInvalid" xml:space="preserve">
+    <value>Config file is invalid or unreadable</value>
+  </data>
+  <data name="Dialog.RestoreSuccess" xml:space="preserve">
+    <value>Restore Successful</value>
+  </data>
+  <data name="Dialog.RestoreSuccessDetail" xml:space="preserve">
+    <value>Restore successful, restart to apply</value>
+  </data>
+  <data name="Dialog.RestoreFailDetail" xml:space="preserve">
+    <value>Failed to write config: {0}</value>
+  </data>
+  <data name="Dialog.Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+
+  <!-- EditNodeDialog validation strings -->
+  <data name="EditNodeValidation.NameEmpty" xml:space="preserve">
+    <value>Name cannot be empty</value>
+  </data>
+  <data name="EditNodeValidation.AddressEmpty" xml:space="preserve">
+    <value>Address cannot be empty</value>
+  </data>
+  <data name="EditNodeValidation.PortInvalid" xml:space="preserve">
+    <value>Port must be an integer between 1 and 65535</value>
+  </data>
+  <data name="EditNodeValidation.ExtraInvalid" xml:space="preserve">
+    <value>Advanced parameters must be a valid JSON object</value>
+  </data>
+
+  <!-- LogsViewModel empty placeholder -->
+  <data name="Logs.EmptyPlaceholder" xml:space="preserve">
+    <value>(No logs)</value>
+  </data>
+
+  <!-- SettingsViewModel save error (for future use) -->
+  <data name="Error.SaveFailed" xml:space="preserve">
+    <value>Save failed: {0}</value>
+  </data>
+
+  <!-- TrayIconService strings (for future use) -->
+  <data name="Tray.StopProxy" xml:space="preserve">
+    <value>Stop Proxy</value>
+  </data>
+  <data name="Tray.StartProxy" xml:space="preserve">
+    <value>Start Proxy</value>
+  </data>
+  <data name="Tray.SwitchNode" xml:space="preserve">
+    <value>Switch Node · {0}</value>
+  </data>
+  <data name="Tray.ShowWindow" xml:space="preserve">
+    <value>Show Window</value>
+  </data>
+  <data name="Tray.Exit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+
+</root>

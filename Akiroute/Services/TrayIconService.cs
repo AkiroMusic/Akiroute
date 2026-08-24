@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Akiroute.Helpers;
 using Microsoft.UI.Dispatching;
 
 namespace Akiroute.Services;
@@ -65,6 +66,11 @@ public sealed class TrayIconService : IDisposable
     private IntPtr _hwnd;
     private IntPtr _hIcon;
     private Thread? _thread;
+
+    /// <summary>Guards <see cref="_disposed"/> and <see cref="_thread"/>: Start/Dispose
+    /// may be called from different threads (UI composition vs tray exit callback),
+    /// so lifecycle state transitions must be serialized.</summary>
+    private readonly object _lifecycleGate = new();
     private bool _disposed;
 
     /// <summary>
@@ -102,40 +108,50 @@ public sealed class TrayIconService : IDisposable
     /// <summary>Starts the tray thread and adds the notification icon. Idempotent.</summary>
     public void Start()
     {
-        if (_disposed || _thread is not null)
+        lock (_lifecycleGate)
         {
-            return;
-        }
+            if (_disposed || _thread is not null)
+            {
+                return;
+            }
 
-        var thread = new Thread(ThreadMain)
-        {
-            IsBackground = true,
-            Name = "AkirouteTray",
-        };
-        thread.SetApartmentState(ApartmentState.STA);
-        _thread = thread;
-        thread.Start();
+            var thread = new Thread(ThreadMain)
+            {
+                IsBackground = true,
+                Name = "AkirouteTray",
+            };
+            thread.SetApartmentState(ApartmentState.STA);
+            _thread = thread;
+            thread.Start();
+        }
     }
 
     /// <summary>Removes the tray icon and stops the tray message loop.</summary>
     public void Dispose()
     {
-        if (_disposed)
+        Thread? thread;
+        lock (_lifecycleGate)
         {
-            return;
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            thread = _thread;
+            _thread = null;
         }
 
-        _disposed = true;
-
-        if (_thread is { IsAlive: true })
+        // Join OUTSIDE the gate: the tray thread never takes it, but a blocked
+        // join while holding the lock would deadlock a concurrent Start().
+        if (thread is { IsAlive: true })
         {
             // WM_QUIT retrieved by GetMessage returns 0 and ends the loop.
             PostMessageW(_hwnd, WM_QUIT, IntPtr.Zero, IntPtr.Zero);
-            _thread.Join(2000);
+            thread.Join(2000);
         }
 
         _hwnd = IntPtr.Zero;
-        _thread = null;
     }
 
     /// <summary>
@@ -205,11 +221,11 @@ public sealed class TrayIconService : IDisposable
             return;
         }
 
-        AppendMenuW(menu, MF_STRING, CmdToggle, _isProxyRunning() ? "停止代理" : "启动代理");
-        AppendMenuW(menu, MF_STRING, CmdSwitchNode, $"切换节点 · {_currentNodeName()}");
+        AppendMenuW(menu, MF_STRING, CmdToggle, _isProxyRunning() ? Loc.Get("Tray.StopProxy") : Loc.Get("Tray.StartProxy"));
+        AppendMenuW(menu, MF_STRING, CmdSwitchNode, Loc.Get("Tray.SwitchNode") + " · " + _currentNodeName());
         AppendMenuW(menu, MF_SEPARATOR, 0, null);
-        AppendMenuW(menu, MF_STRING, CmdShow, "显示主窗口");
-        AppendMenuW(menu, MF_STRING, CmdExit, "退出");
+        AppendMenuW(menu, MF_STRING, CmdShow, Loc.Get("Tray.ShowWindow"));
+        AppendMenuW(menu, MF_STRING, CmdExit, Loc.Get("Tray.Exit"));
 
         GetCursorPos(out POINT pt);
         uint command = TrackPopupMenuEx(menu, TPM_RIGHTBUTTON | TPM_RETURNCMD, pt.X, pt.Y, _hwnd, IntPtr.Zero);
@@ -317,9 +333,14 @@ public sealed class TrayIconService : IDisposable
         public IntPtr hIcon;
         public IntPtr hCursor;
         public IntPtr hbrBackground;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string lpszMenuName;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+        // NOTE: the native WNDCLASSEXW stores these as LPCWSTR POINTERS, not
+        // inline buffers. Marshaling them as ByValTStr inflates the struct
+        // (~536 bytes vs the real 80 on x64), making RegisterClassExW fail
+        // with ERROR_INVALID_PARAMETER (87) — which silently killed the whole
+        // tray. LPWStr keeps the layout pointer-based as native expects.
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string? lpszMenuName;
+        [MarshalAs(UnmanagedType.LPWStr)]
         public string lpszClassName;
         public IntPtr hIconSm;
     }

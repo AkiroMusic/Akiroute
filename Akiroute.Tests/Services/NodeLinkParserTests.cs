@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json.Nodes;
 using Akiroute.Models;
 using Akiroute.Services;
@@ -333,5 +334,194 @@ public class NodeLinkParserTests
         // Assert: no nodes, no exception.
         Assert.Empty(empty);
         Assert.Empty(whitespace);
+    }
+
+    [Fact]
+    public void Parse_Base64SubscriptionBody_SingleNode()
+    {
+        // Arrange: a single vless link base64-encoded as a subscription body.
+        var link = $"vless://{Uuid}@example.com:443?encryption=none#Sub%20Node";
+        var body = Convert.ToBase64String(Encoding.UTF8.GetBytes(link));
+
+        // Act: parse the encoded body.
+        var nodes = NodeLinkParser.Parse(body);
+
+        // Assert: the node comes through with its fields intact.
+        var node = Assert.Single(nodes);
+        Assert.Equal("vless", node.Type);
+        Assert.Equal("example.com", node.Address);
+        Assert.Equal(443, node.Port);
+        Assert.Equal("Sub Node", node.Name);
+        Assert.Equal(Uuid, GetStringParam(node, "uuid"));
+    }
+
+    [Fact]
+    public void Parse_Base64SubscriptionBody_MultiNode_WithNewlines()
+    {
+        // Arrange: three links joined by newlines, base64-encoded as a body.
+        var links =
+            $"vless://{Uuid}@node-a.example.com:443#Node%20A\n" +
+            $"vless://{Uuid}@node-b.example.com:8443#Node%20B\n" +
+            $"ss://{SsUserInfo}@node-c.example.com:8388#Node%20C";
+        var body = Convert.ToBase64String(Encoding.UTF8.GetBytes(links));
+
+        // Act: parse the encoded body.
+        var nodes = NodeLinkParser.Parse(body);
+
+        // Assert: every link parsed, in order, with decoded names.
+        Assert.Equal(3, nodes.Count);
+        Assert.Equal("Node A", nodes[0].Name);
+        Assert.Equal("Node B", nodes[1].Name);
+        Assert.Equal("Node C", nodes[2].Name);
+    }
+
+    [Fact]
+    public void Parse_Base64SubscriptionBody_WithWhitespace()
+    {
+        // Arrange: base64 of one link with spaces, newlines, and tabs interleaved.
+        var link = $"vless://{Uuid}@example.com:443#WS%20Node";
+        var compact = Convert.ToBase64String(Encoding.UTF8.GetBytes(link));
+        var body = $" {compact[..10]}\r\n\t{compact[10..20]} {compact[20..]} ";
+
+        // Act: parse the whitespace-laced body.
+        var nodes = NodeLinkParser.Parse(body);
+
+        // Assert: whitespace stripped before decoding, node parsed.
+        var node = Assert.Single(nodes);
+        Assert.Equal("vless", node.Type);
+        Assert.Equal("WS Node", node.Name);
+    }
+
+    [Fact]
+    public void Parse_GarbageText_ReturnsEmpty()
+    {
+        // Act: plain prose that is neither links nor a subscription body.
+        var nodes = NodeLinkParser.Parse("hello world this is not a subscription");
+
+        // Assert: no nodes, no exception.
+        Assert.Empty(nodes);
+    }
+
+    [Fact]
+    public void Parse_Base64OfGarbage_ReturnsEmpty()
+    {
+        // Arrange: base64-encoded text that is not a link.
+        var body = Convert.ToBase64String(Encoding.UTF8.GetBytes("this is not a node link at all"));
+
+        // Act: parse the encoded body.
+        var nodes = NodeLinkParser.Parse(body);
+
+        // Assert: decoded but not a link, so nothing is returned.
+        Assert.Empty(nodes);
+    }
+
+    [Fact]
+    public void Parse_ShortBase64Like_ReturnsEmpty()
+    {
+        // Arrange: a base64-ish token shorter than the 16-char subscription threshold.
+        var body = "abc123456789=";
+
+        // Act: parse the token.
+        var nodes = NodeLinkParser.Parse(body);
+
+        // Assert: not treated as a subscription body, no nodes.
+        Assert.Empty(nodes);
+    }
+
+    [Fact]
+    public void Parse_InvalidLinks_AreSkipped_ValidKept()
+    {
+        // Arrange: a plain-text line next to a valid vless link.
+        var raw = $"this is plain text\nvless://{Uuid}@example.com:443#Mixed%20Node";
+
+        // Act: parse the mixed payload.
+        var nodes = NodeLinkParser.Parse(raw);
+
+        // Assert: the plausible-link pre-check drops the garbage and keeps the valid link.
+        var node = Assert.Single(nodes);
+        Assert.Equal("Mixed Node", node.Name);
+    }
+
+    /// <summary>
+    /// Theory covering IPv6 negative cases: no port, empty port, unclosed
+    /// bracket, and non-numeric port. Each must be rejected (empty result).
+    /// Verified against NodeLinkParser.TryParseHostPort behavior.
+    /// </summary>
+    [Theory]
+    [InlineData("[::1]")]           // no port after bracket
+    [InlineData("[::1]:")]          // empty port
+    [InlineData("[::1")]            // unclosed bracket
+    [InlineData("[::1]:abc")]       // non-numeric port
+    public void Parse_IPv6NegativeCases_Rejected(string hostPort)
+    {
+        // Arrange: embed the malformed IPv6 host:port into a vless link.
+        var raw = $"vless://{Uuid}@{hostPort}#BadV6";
+
+        // Act: parse the link.
+        var nodes = NodeLinkParser.Parse(raw);
+
+        // Assert: malformed IPv6 host:port is rejected (no nodes returned).
+        Assert.Empty(nodes);
+    }
+
+    /// <summary>
+    /// Theory covering IPv6 port boundary edges: port 0 (below valid range),
+    /// port 65536 and 99999 (above valid range). All must be rejected.
+    /// Verified against NodeLinkParser.TryParseHostPort port range [1, 65535].
+    /// </summary>
+    [Theory]
+    [InlineData("[::1]:0")]       // port 0: below valid range (1-65535)
+    [InlineData("[::1]:65536")]   // port 65536: above valid range
+    [InlineData("[::1]:99999")]   // port 99999: above valid range
+    public void Parse_VlessLink_Ipv6PortEdge_OutOfRange_Rejected(string hostPort)
+    {
+        // Arrange: embed the out-of-range port into a vless link with IPv6 host.
+        var raw = $"vless://{Uuid}@{hostPort}#EdgePort";
+
+        // Act: parse the link.
+        var nodes = NodeLinkParser.Parse(raw);
+
+        // Assert: out-of-range port is rejected (no nodes returned).
+        Assert.Empty(nodes);
+    }
+
+    [Fact]
+    public void Parse_VlessLink_Ipv6PortEdge_ValidPort443_Parsed()
+    {
+        // Arrange: a vless link with bracketed IPv6 host and valid port 443 (control case).
+        var raw = $"vless://{Uuid}@[::1]:443#ControlV6";
+
+        // Act: parse the link.
+        var node = Single(raw);
+
+        // Assert: valid IPv6 host and port are parsed correctly.
+        Assert.Equal("::1", node.Address);
+        Assert.Equal(443, node.Port);
+        Assert.Equal("ControlV6", node.Name);
+    }
+
+    /// <summary>
+    /// Theory covering IPv6 valid-port boundary edges: port 1 (minimum valid)
+    /// and port 65535 (maximum valid). Both must parse successfully with the
+    /// correct port value. Verified against NodeLinkParser.TryParseHostPort
+    /// port range [1, 65535].
+    /// </summary>
+    [Theory]
+    [InlineData("[::1]:1")]         // port 1: minimum valid port
+    [InlineData("[::1]:65535")]     // port 65535: maximum valid port
+    public void Parse_VlessLink_Ipv6PortBoundary_Valid(string hostPort)
+    {
+        // Arrange: embed the boundary port into a vless link with IPv6 host.
+        var raw = $"vless://{Uuid}@{hostPort}#BoundaryV6";
+
+        // Act: parse the link.
+        var node = Single(raw);
+
+        // Assert: boundary port is accepted and parsed correctly.
+        Assert.Equal("::1", node.Address);
+        // Extract the expected port from the hostPort string (e.g. "[::1]:1" → 1).
+        var expectedPort = int.Parse(hostPort[(hostPort.LastIndexOf(':') + 1)..]);
+        Assert.Equal(expectedPort, node.Port);
+        Assert.Equal("BoundaryV6", node.Name);
     }
 }

@@ -17,7 +17,7 @@
         -->
         <Style x:Key="TogglePillButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{ThemeResource EtAccentBrush}" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{ThemeResource EtTextOnAccentBrush}" />
             <Setter Property="Height" Value="28" />
             <Setter Property="MinWidth" Value="100" />
             <Setter Property="Padding" Value="16,0" />
@@ -26,6 +26,7 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="UseSystemFocusVisuals" Value="False" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -39,17 +40,34 @@
                                     <VisualState x:Name="PointerOver">
                                         <VisualState.Setters>
                                             <Setter Target="ButtonRoot.Background" Value="{ThemeResource EtAccentHoverBrush}" />
+                                            <Setter Target="FocusOuter.BorderBrush" Value="Transparent" />
+                                            <Setter Target="FocusInner.BorderBrush" Value="Transparent" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Pressed">
                                         <VisualState.Setters>
                                             <Setter Target="ButtonRoot.Background" Value="{ThemeResource EtAccent20Brush}" />
+                                            <Setter Target="FocusOuter.BorderBrush" Value="Transparent" />
+                                            <Setter Target="FocusInner.BorderBrush" Value="Transparent" />
                                         </VisualState.Setters>
                                     </VisualState>
                                     <VisualState x:Name="Disabled">
                                         <VisualState.Setters>
                                             <Setter Target="ButtonRoot.Background" Value="{ThemeResource EtSurface2Brush}" />
                                             <Setter Target="ButtonRoot.Opacity" Value="0.7" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                                <!-- Keyboard focus: 2px double-ring; collapses on PointerOver/Pressed -->
+                                <VisualStateGroup x:Name="FocusStates">
+                                    <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:0.15" />
+                                    </VisualStateGroup.Transitions>
+                                    <VisualState x:Name="Unfocused" />
+                                    <VisualState x:Name="Focused">
+                                        <VisualState.Setters>
+                                            <Setter Target="FocusOuter.BorderBrush" Value="{ThemeResource FocusVisualPrimaryBrush}" />
+                                            <Setter Target="FocusInner.BorderBrush" Value="{ThemeResource FocusVisualSecondaryBrush}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                 </VisualStateGroup>
@@ -64,6 +82,12 @@
                                     Content="{TemplateBinding Content}"
                                     Foreground="{TemplateBinding Foreground}" />
                             </Border>
+                            <Border x:Name="FocusOuter" BorderThickness="2" BorderBrush="Transparent"
+                                    CornerRadius="{TemplateBinding CornerRadius}" Margin="-3"
+                                    IsHitTestVisible="False" />
+                            <Border x:Name="FocusInner" BorderThickness="1" BorderBrush="Transparent"
+                                    CornerRadius="{TemplateBinding CornerRadius}" Margin="-1"
+                                    IsHitTestVisible="False" />
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -213,7 +237,7 @@
                             FontSize="12" />
                         <TextBlock
                             x:Name="ToggleText"
-                            Text="启动"
+                            x:Uid="StatusToggleBtn"
                             FontSize="12"
                             FontWeight="SemiBold" />
                     </StackPanel>
