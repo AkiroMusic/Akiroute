@@ -102,6 +102,54 @@ public class ConfigBackupServiceTests : IDisposable
         Assert.Equal(15, restored.AutoPingMinutes);
     }
 
+    // ── Test 1b: Export stays plaintext (portable by design) ─────────────
+
+    /// <summary>
+    /// 备份导出必须是明文 JSON：跨机器可恢复是备份的核心用途，
+    /// 代价（凭据明文）由 UI 警告向用户说明。
+    /// The export must be PLAINTEXT JSON — portability is the point of a
+    /// backup; the UI warns about the credential exposure.
+    /// </summary>
+    [Fact]
+    public void Export_WritesPlaintextJson_NotEncryptedWrapper()
+    {
+        // Arrange
+        Directory.CreateDirectory(_tempDir);
+
+        // Act.
+        ConfigBackupService.ExportToFile(SampleSettings(), BackupPath);
+        var raw = File.ReadAllText(BackupPath);
+
+        // Assert: readable plaintext, NOT the encrypted wrapper format.
+        Assert.False(SettingsEncryption.IsEncryptedPayload(raw));
+        Assert.Contains("https://example.com/sub", raw);
+    }
+
+    // ── Test 1c: Import accepts a DPAPI-encrypted copy of the live config ─
+
+    /// <summary>
+    /// 导入加密格式的配置副本（用户直接复制 settings.json 当备份的场景）
+    /// 应当成功解密读取 —— 仅限同一 Windows 用户/机器。
+    /// Importing an ENCRYPTED copy of the live config (e.g. the user backed up
+    /// settings.json directly) must decrypt and load on the same machine.
+    /// </summary>
+    [Fact]
+    public void Import_EncryptedConfigCopy_RestoresOnSameMachine()
+    {
+        // Arrange: write the live-format encrypted payload to the backup path.
+        Directory.CreateDirectory(_tempDir);
+        var plainJson = ToJson(SampleSettings());
+        File.WriteAllText(BackupPath, SettingsEncryption.EncryptToPayload(plainJson));
+
+        // Act.
+        var restored = ConfigBackupService.ImportFromFile(BackupPath);
+
+        // Assert.
+        Assert.NotNull(restored);
+        Assert.Equal("Tokyo-1", restored.Nodes[0].Name);
+        Assert.Equal("https://example.com/sub", restored.Subscriptions[0].Url);
+    }
+
     // ── Test 2: Invalid JSON returns null ─────────────────────────────────
 
     /// <summary>

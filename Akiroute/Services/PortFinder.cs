@@ -75,4 +75,40 @@ public static class PortFinder
 
         return 0;
     }
+
+    /// <summary>
+    /// Finds the first free CONSECUTIVE port pair at or above
+    /// <paramref name="preferredPort"/> — the SOCKS inbound takes the first
+    /// port and the HTTP inbound the second, so both must be free. Returns the
+    /// first port of the pair, or 0 when no free pair exists in the probe
+    /// window (the caller then surfaces the failure).
+    /// </summary>
+    public static int FindFreePortPair(int preferredPort = 3333, int maxAttempts = 28)
+    {
+        if (maxAttempts < 1)
+        {
+            maxAttempts = 1;
+        }
+
+        if (preferredPort is < 1 or > 65535 || preferredPort + maxAttempts - 1 > 65535)
+        {
+            return 0;
+        }
+
+        var lastCandidate = preferredPort + maxAttempts - 1;
+        for (var port = preferredPort; port <= lastCandidate; port++)
+        {
+            if (port + 1 > 65535)
+            {
+                break;
+            }
+
+            if (IsPortAvailable(port) && IsPortAvailable(port + 1))
+            {
+                return port;
+            }
+        }
+
+        return 0;
+    }
 }

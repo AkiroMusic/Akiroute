@@ -166,6 +166,52 @@ public class SettingsServiceTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => SettingsService.Save(null!, ConfigPath));
     }
 
+    [Fact]
+    public void Save_WritesEncryptedWrapper_NotPlaintextSecrets()
+    {
+        // Act: save settings carrying a credential-bearing subscription URL.
+        SettingsService.Save(SampleSettings(), ConfigPath);
+        var raw = File.ReadAllText(ConfigPath);
+
+        // Assert: the file is a DPAPI wrapper document and leaks no secrets.
+        Assert.True(SettingsEncryption.IsEncryptedPayload(raw), "saved file must use the encrypted wrapper format");
+        Assert.DoesNotContain("https://example.com/sub", raw);
+        Assert.DoesNotContain("chrome.exe", raw);
+        Assert.DoesNotContain("SG-1", raw);
+    }
+
+    [Fact]
+    public void Load_LegacyPlaintextFile_StillLoads()
+    {
+        // Arrange: a plain-JSON settings file written by an older build.
+        Directory.CreateDirectory(_tempDir);
+        File.WriteAllText(ConfigPath, ToJson(SampleSettings()));
+
+        // Act.
+        var restored = SettingsService.Load(ConfigPath);
+
+        // Assert: backward compatible — plaintext files remain readable and
+        // migrate to the encrypted format on their next save.
+        Assert.Equal(ToJson(SampleSettings()), ToJson(restored));
+    }
+
+    [Fact]
+    public void Load_UndecryptableWrapper_BacksUpFileAndReturnsDefaults()
+    {
+        // Arrange: a wrapper document whose data blob is not valid base64 —
+        // the same code path a foreign-machine DPAPI blob takes.
+        Directory.CreateDirectory(_tempDir);
+        File.WriteAllText(ConfigPath, "{\"format\":\"akiroute-encrypted-v1\",\"cipher\":\"dpapi-currentuser\",\"data\":\"%%%not-base64%%%\"}");
+
+        // Act: load — must not throw.
+        var result = SettingsService.Load(ConfigPath);
+
+        // Assert: defaults returned, file preserved under the corrupt backup name.
+        Assert.Equal(ToJson(new AppSettings()), ToJson(result));
+        Assert.False(File.Exists(ConfigPath));
+        Assert.Single(Directory.GetFiles(_tempDir, "settings.json.corrupt-*"));
+    }
+
     /// <summary>
     /// Concurrent stress test: 8 parallel tasks each perform 50 iterations of
     /// mutate-field → Save → Load → assert persisted. No exceptions should escape;

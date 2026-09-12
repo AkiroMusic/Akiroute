@@ -83,7 +83,7 @@ public static class XrayConfigBuilder
     /// <summary>Builds the top-level log section pointing at the app log directory.</summary>
     private static JsonObject BuildLogSection() => new()
     {
-        ["loglevel"] = "warning",
+        ["loglevel"] = "info",
         ["error"] = Path.Combine(AppPaths.LogsDir, "akiroute-xray-error.log"),
         ["access"] = Path.Combine(AppPaths.LogsDir, "akiroute-xray-access.log"),
     };

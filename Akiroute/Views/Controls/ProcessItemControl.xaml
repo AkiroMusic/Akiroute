@@ -221,9 +221,10 @@
                 -->
                 <Border
                     Grid.Column="2"
-                    Width="200"
+                    MinWidth="220"
                     Height="30"
                     VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
                     CornerRadius="8"
                     Background="{ThemeResource EtSurface2Brush}"
                     BorderBrush="{ThemeResource EtBorderBrush}"

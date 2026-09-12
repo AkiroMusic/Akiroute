@@ -29,6 +29,9 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.10" />
+    <!-- DPAPI wrapper (crypt32.dll) for encrypting stored node credentials.
+         Thin P/Invoke, no reflection — Native AOT safe. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.10" />
   </ItemGroup>
 
   <!--

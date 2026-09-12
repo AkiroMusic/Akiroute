@@ -71,7 +71,7 @@ public class XrayConfigBuilderTests
 
         // Assert: log paths live under the app logs directory.
         var log = config["log"]!.AsObject();
-        Assert.Equal("warning", log["loglevel"]!.GetValue<string>());
+        Assert.Equal("info", log["loglevel"]!.GetValue<string>());
         Assert.EndsWith("akiroute-xray-error.log", log["error"]!.GetValue<string>());
         Assert.EndsWith("akiroute-xray-access.log", log["access"]!.GetValue<string>());
     }
@@ -387,7 +387,7 @@ public class XrayConfigBuilderTests
         Assert.NotNull(reparsed);
         Assert.Equal("vless", reparsed!["outbounds"]![0]!["protocol"]!.GetValue<string>());
         Assert.Equal(LocalPort, reparsed["inbounds"]![0]!["port"]!.GetValue<int>());
-        Assert.Equal("warning", reparsed["log"]!["loglevel"]!.GetValue<string>());
+        Assert.Equal("info", reparsed["log"]!["loglevel"]!.GetValue<string>());
         Assert.Equal("IPIfNonMatch", reparsed["routing"]!["domainStrategy"]!.GetValue<string>());
     }
 

@@ -37,6 +37,14 @@ internal static class ClashNodeMapper
             return null;
         }
 
+        // A missing or non-numeric port maps to 0; such a node can never build
+        // a working config, so reject it at import time.
+        var port = YamlMapReader.GetInt(map, "port");
+        if (port is < 1 or > 65535)
+        {
+            return null;
+        }
+
         var extra = new Dictionary<string, JsonNode>();
         PopulateExtraParams(map, type, extra);
 
@@ -46,7 +54,7 @@ internal static class ClashNodeMapper
             Name = name,
             Type = type,
             Address = server,
-            Port = YamlMapReader.GetInt(map, "port"),
+            Port = port,
             RawConfig = BuildRawConfig(map),
             ExtraParams = extra,
         };

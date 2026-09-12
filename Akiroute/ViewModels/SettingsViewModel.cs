@@ -42,6 +42,8 @@ public partial class SettingsViewModel : ObservableObject
     private int _subscriptionAutoUpdateMinutes;
     private int _autoPingMinutes;
     private bool _tunEnabled;
+    private bool _startMinimized;
+    private bool _launchOnStartup;
 
     /// <summary>Failure text from the last <see cref="Save"/>; null when the last save succeeded.</summary>
     public string? SaveError
@@ -154,11 +156,48 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>启动时最小化到托盘，同步至 <see cref="AppSettings.StartMinimized"/>。</summary>
+    public bool StartMinimized
+    {
+        get => _startMinimized;
+        set
+        {
+            if (SetProperty(ref _startMinimized, value) && !_suppressSync)
+            {
+                Settings.StartMinimized = value;
+                NotifyChanged();
+            }
+        }
+    }
+
+    /// <summary>开机自动启动（通过 HKCU Run 注册表项），同步至 <see cref="AppSettings.LaunchOnStartup"/>。</summary>
+    public bool LaunchOnStartup
+    {
+        get => _launchOnStartup;
+        set
+        {
+            if (SetProperty(ref _launchOnStartup, value) && !_suppressSync)
+            {
+                Settings.LaunchOnStartup = value;
+                SetLaunchOnStartup(value);
+                NotifyChanged();
+            }
+        }
+    }
+
     /// <summary>
-    /// 当前订阅源条目的只读视图；ItemsControl 绑定此属性以枚举
-    /// <see cref="Settings.Subscriptions"/>。调用 <see cref="RefreshSubscriptionsView"/>
-    /// 使绑定刷新。
+    /// 委托给 <see cref="StartupHelper"/> 设置开机自启注册表项；失败（注册表
+    /// 不可写、路径为空等，内部已记入日志）反馈到 <see cref="SaveError"/>，
+    /// 不影响应用运行。
     /// </summary>
+    private void SetLaunchOnStartup(bool enable)
+    {
+        if (!StartupHelper.SetLaunchOnStartup(enable))
+        {
+            SaveError = Loc.Get("Error.LaunchOnStartupFailed");
+        }
+    }
+
     /// <summary>
     /// 订阅源条目的只读视图。每次访问返回快照副本：Native AOT 下 ItemsControl 的
     /// x:Bind 在属性变更时比较引用，原地修改同一 List 实例不会触发重绑定，
@@ -177,6 +216,34 @@ public partial class SettingsViewModel : ObservableObject
     /// </summary>
     public void RefreshSubscriptionsView() =>
         OnPropertyChanged(nameof(SubscriptionEntries));
+
+    /// <summary>
+    /// Re-reads every scalar wrapper from <see cref="Settings"/> without touching
+    /// disk (sync suppressed, so no registry write or event fires). Used after a
+    /// config restore refills the shared <see cref="AppSettings"/> in place.
+    /// </summary>
+    public void RefreshWrappersFromSettings()
+    {
+        _suppressSync = true;
+        try
+        {
+            Mode = Settings.Mode;
+            Theme = Settings.Theme;
+            Port = Settings.Port;
+            AutoConnect = Settings.AutoConnect;
+            SubscriptionAutoUpdateMinutes = Settings.SubscriptionAutoUpdateMinutes;
+            AutoPingMinutes = Settings.AutoPingMinutes;
+            TunEnabled = Settings.TunEnabled;
+            StartMinimized = Settings.StartMinimized;
+            LaunchOnStartup = Settings.LaunchOnStartup;
+        }
+        finally
+        {
+            _suppressSync = false;
+        }
+
+        RefreshSubscriptionsView();
+    }
 
     /// <summary>
     /// 移除指定订阅源条目并持久化；null 参数安全忽略。
@@ -221,6 +288,8 @@ public partial class SettingsViewModel : ObservableObject
             SubscriptionAutoUpdateMinutes = settings.SubscriptionAutoUpdateMinutes;
             AutoPingMinutes = settings.AutoPingMinutes;
             TunEnabled = settings.TunEnabled;
+            StartMinimized = settings.StartMinimized;
+            LaunchOnStartup = settings.LaunchOnStartup;
         }
         finally
         {
@@ -253,6 +322,8 @@ public partial class SettingsViewModel : ObservableObject
             Settings.SubscriptionAutoUpdateMinutes = loaded.SubscriptionAutoUpdateMinutes;
             Settings.AutoPingMinutes = loaded.AutoPingMinutes;
             Settings.TunEnabled = loaded.TunEnabled;
+            Settings.StartMinimized = loaded.StartMinimized;
+            Settings.LaunchOnStartup = loaded.LaunchOnStartup;
             Settings.Theme = loaded.Theme;
 
             Mode = loaded.Mode;
@@ -262,6 +333,8 @@ public partial class SettingsViewModel : ObservableObject
             SubscriptionAutoUpdateMinutes = loaded.SubscriptionAutoUpdateMinutes;
             AutoPingMinutes = loaded.AutoPingMinutes;
             TunEnabled = loaded.TunEnabled;
+            StartMinimized = loaded.StartMinimized;
+            LaunchOnStartup = loaded.LaunchOnStartup;
             SaveError = null;
         }
         finally

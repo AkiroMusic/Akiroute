@@ -107,14 +107,22 @@ public sealed class XrayService : IDisposable
     /// <summary>
     /// Kills any orphaned xray process whose <c>MainModule.FileName</c> matches
     /// <paramref name="enginePath"/>. Called on startup to clean up crashes
-    /// that left the engine running from a previous session.
+    /// that left the engine running from a previous session. Only processes in
+    /// the CURRENT session are touched — another user's same-path engine is
+    /// never terminated.
     /// </summary>
     public static void KillOrphanedEngine(string enginePath)
     {
+        var currentSession = Process.GetCurrentProcess().SessionId;
         foreach (var proc in Process.GetProcessesByName("xray"))
         {
             try
             {
+                if (proc.SessionId != currentSession)
+                {
+                    continue;
+                }
+
                 var mainModule = proc.MainModule;
                 if (mainModule is not null
                     && string.Equals(mainModule.FileName, enginePath, StringComparison.OrdinalIgnoreCase))
@@ -134,6 +142,85 @@ public sealed class XrayService : IDisposable
             {
                 proc.Dispose();
             }
+        }
+    }
+
+    /// <summary>
+    /// Deletes the leftover generated config (if any) at startup. The config
+    /// carries node credentials, so a copy abandoned by a crash must not sit
+    /// in the shared temp directory indefinitely.
+    /// </summary>
+    public static void CleanupOrphanedTempConfig()
+    {
+        try
+        {
+            if (File.Exists(AppPaths.XrayConfigTemp))
+            {
+                File.Delete(AppPaths.XrayConfigTemp);
+                AppLogger.Info("deleted orphaned xray temp config from a previous session");
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppLogger.Warn($"[XrayService] Could not delete orphaned temp config: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Rotates the xray access/error logs when they exceed
+    /// <paramref name="maxBytes"/> (single ".old" generation, same policy as
+    /// <see cref="AppLogger"/>). The engine appends without bound, so without
+    /// this the access log — which is also the throughput sample source —
+    /// grows forever. Never throws.
+    /// </summary>
+    public static void RotateEngineLogs(long maxBytes = 2 * 1024 * 1024)
+    {
+        Rotate(Path.Combine(AppPaths.LogsDir, "akiroute-xray-access.log"), maxBytes);
+        Rotate(Path.Combine(AppPaths.LogsDir, "akiroute-xray-error.log"), maxBytes);
+
+        static void Rotate(string path, long maxBytes)
+        {
+            try
+            {
+                if (!File.Exists(path) || new FileInfo(path).Length <= maxBytes)
+                {
+                    return;
+                }
+
+                var old = path + ".old";
+                if (File.Exists(old))
+                {
+                    File.Delete(old);
+                }
+
+                File.Move(path, old);
+                AppLogger.Info($"[XrayService] Rotated engine log {path}");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                AppLogger.Warn($"[XrayService] Engine log rotation failed for {path}: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Best-effort removal of this service's generated config file. Called
+    /// whenever the engine is stopped or disposed so node credentials do not
+    /// linger in the temp directory while the proxy is not running.
+    /// </summary>
+    private void DeleteConfigTemp()
+    {
+        try
+        {
+            if (File.Exists(_configTempPath))
+            {
+                File.Delete(_configTempPath);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Debug.WriteLine($"[XrayService] Could not delete temp config {_configTempPath}: {ex.Message}");
+            AppLogger.Warn($"[XrayService] Could not delete temp config {_configTempPath}: {ex.Message}");
         }
     }
 
@@ -212,22 +299,24 @@ public sealed class XrayService : IDisposable
                 process = _process;
             }
 
-            if (process is null)
+            if (process is not null)
             {
-                return;
+                TryKill(process);
+                try
+                {
+                    process.WaitForExit(2000);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+                {
+                    // The process was already reaped; nothing more to wait for.
+                }
+
+                CleanupProcess();
             }
 
-            TryKill(process);
-            try
-            {
-                process.WaitForExit(2000);
-            }
-            catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
-            {
-                // The process was already reaped; nothing more to wait for.
-            }
-
-            CleanupProcess();
+            // Remove the credential-bearing config even when no process ran —
+            // it may have been left behind by a failed start.
+            DeleteConfigTemp();
             IsRunning = false;
         }
         finally
@@ -281,12 +370,17 @@ public sealed class XrayService : IDisposable
         }
 
         AppPaths.EnsureDirectories();
+        // The engine appends to its logs forever — trim oversized files before
+        // this run appends more (also keeps the throughput sample source sane).
+        RotateEngineLogs();
 
-        // Resolve the local inbound port (3333..3360 window by default, plan §7.1).
-        var localPort = PortFinder.FindFreePort(preferredPort, 28);
+        // Resolve the local inbound ports (3333..3360 window by default, plan
+        // §7.1). SOCKS and HTTP need consecutive free ports, so a free pair is
+        // probed.
+        var localPort = PortFinder.FindFreePortPair(preferredPort, 28);
         if (localPort == 0)
         {
-            SetFailed("No free port", 0);
+            SetFailed("No free port pair", 0);
             return false;
         }
 
@@ -382,6 +476,9 @@ public sealed class XrayService : IDisposable
                 await WaitForExitQuietlyAsync(process).ConfigureAwait(false);
             }
 
+            // The engine never became ready — drop the credential-bearing config.
+            DeleteConfigTemp();
+
             if (cancelled)
             {
                 IsRunning = false;
@@ -436,6 +533,7 @@ public sealed class XrayService : IDisposable
         }
 
         CleanupProcess();
+        DeleteConfigTemp();
         IsRunning = false;
         LocalPort = 0;
         SetState(XrayServiceState.Stopped);
@@ -664,6 +762,9 @@ public sealed class XrayService : IDisposable
             LastCrashSummary = summary;
             ExitCode = exitCode;
         }
+        // Every SetFailed call site follows a failed start or an engine crash:
+        // the generated config is not needed by any live process.
+        DeleteConfigTemp();
         SetState(XrayServiceState.Failed);
     }
 

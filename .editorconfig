@@ -1,0 +1,27 @@
+# Akiroute editor conventions. Keep this minimal — the goal is consistency,
+# not a style police: match the surrounding code when editing.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,ps1,xml}]
+indent_size = 2
+
+[*.md]
+# Two trailing spaces are a hard line break in Markdown.
+trim_trailing_whitespace = false
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+dotnet_style_readonly_field = true:suggestion
+# Async methods are fire-and-forget at deliberate UI seams; the warning is
+# handled case by case with try/catch + logging instead of ConfigureAwait spam.
+dotnet_diagnostic.CA2007.severity = none

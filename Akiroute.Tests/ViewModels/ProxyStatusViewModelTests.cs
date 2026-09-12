@@ -28,7 +28,7 @@ public class ProxyStatusViewModelTests
 
         Assert.False(vm.IsRunning);
         Assert.False(vm.IsStarting);
-        Assert.Equal("未选择节点", vm.LastError);
+        Assert.Equal("No node selected", vm.LastError);
     }
 
     [Fact]
@@ -102,14 +102,19 @@ public class ProxyStatusViewModelTests
     }
 
     [Fact]
-    public void LogReceived_MirrorsXrayRecentLogs()
+    public void LogReceived_DoesNotMutateStatusState()
     {
         using var xray = NewXray();
         var vm = NewViewModel(xray, new AppSettings());
 
+        // The status VM deliberately does not subscribe to LogReceived (the log
+        // page reads the engine ring buffer on demand); emitting lines must not
+        // throw or mutate any bound state.
         xray.AppendLogLine("hello xray");
 
-        Assert.Equal("hello xray", Assert.Single(vm.RecentLogs));
+        Assert.False(vm.IsRunning);
+        Assert.False(vm.IsStarting);
+        Assert.NotNull(vm.StatusMessage);
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using System;
 using Akiroute.Helpers;
 using Akiroute.Models;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 
@@ -22,7 +23,11 @@ public sealed partial class NodeCardControl : UserControl
         typeof(NodeCardControl),
         new PropertyMetadata(null, OnNodeChanged));
 
-    /// <summary>Raised when the card is tapped.</summary>
+    /// <summary>
+    /// Raised when the card is ACTIVATED from the keyboard (Enter/Space) so a
+    /// focused card can be selected without a pointer. Pointer taps are handled
+    /// at the ListView level and do not flow through this event.
+    /// </summary>
     public event EventHandler? NodeClicked;
 
     /// <summary>Initializes a new instance of the <see cref="NodeCardControl"/> class.</summary>
@@ -59,6 +64,8 @@ public sealed partial class NodeCardControl : UserControl
         DetailText.Text = FormatDetail(node);
         UpdateBadge(node.PingMs);
         VisualStateManager.GoToState(this, node.IsSelected ? "Selected" : "Unselected", true);
+        // Screen readers announce the node name and address as one string.
+        AutomationProperties.SetName(this, $"{node.Name} — {FormatDetail(node)}");
     }
 
     /// <summary>Builds the "address:port" detail line, or an empty string when no address is set.</summary>
@@ -103,6 +110,16 @@ public sealed partial class NodeCardControl : UserControl
 
     private void CardRoot_Tapped(object sender, TappedRoutedEventArgs e)
         => NodeClicked?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Keyboard activation: Enter or Space behaves like a tap.</summary>
+    private void OnCardKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key is Windows.System.VirtualKey.Enter or Windows.System.VirtualKey.Space)
+        {
+            NodeClicked?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+    }
 
     private void CardRoot_PointerEntered(object sender, PointerRoutedEventArgs e)
         => VisualStateManager.GoToState(this, "PointerOver", true);

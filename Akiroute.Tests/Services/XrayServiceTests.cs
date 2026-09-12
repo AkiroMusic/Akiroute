@@ -81,12 +81,12 @@ public class XrayServiceTests : IDisposable
             // Act: no candidate port is free, so the service must fail fast.
             var result = await service.StartAsync(VlessNode(), Array.Empty<ProcessRule>(), ProxyMode.Global, 40000);
 
-            // Assert: no process, Failed state, exact "No free port" summary.
+            // Assert: no process, Failed state, exact "No free port pair" summary.
             Assert.False(result);
             Assert.False(service.IsRunning);
             Assert.Contains(XrayServiceState.Failed, states);
             Assert.Equal(XrayServiceState.Failed, states.Last());
-            Assert.Equal("No free port", service.LastCrashSummary);
+            Assert.Equal("No free port pair", service.LastCrashSummary);
         }
         finally
         {
@@ -122,7 +122,11 @@ public class XrayServiceTests : IDisposable
     {
         if (SourceXrayExe is null)
         {
-            return; // Skipped: source-tree xray.exe not available on this machine.
+            // Engine integration test NOT RUN: source-tree xray.exe is missing
+            // (run tools/fetch-assets.ps1). Reported loudly so a vacuous green
+            // suite cannot hide the coverage gap.
+            Console.WriteLine("[SKIP] XrayServiceTests: source-tree xray.exe not available — engine integration coverage is NOT running.");
+            return;
         }
 
         // Arrange: an unreachable outbound (127.0.0.1:1) is fine — xray starts and
@@ -162,7 +166,11 @@ public class XrayServiceTests : IDisposable
     {
         if (SourceXrayExe is null)
         {
-            return; // Skipped: source-tree xray.exe not available on this machine.
+            // Engine integration test NOT RUN: source-tree xray.exe is missing
+            // (run tools/fetch-assets.ps1). Reported loudly so a vacuous green
+            // suite cannot hide the coverage gap.
+            Console.WriteLine("[SKIP] XrayServiceTests: source-tree xray.exe not available — engine integration coverage is NOT running.");
+            return;
         }
 
         // Arrange: the config temp path lives under a directory that does not
@@ -192,7 +200,11 @@ public class XrayServiceTests : IDisposable
     {
         if (SourceXrayExe is null)
         {
-            return; // Skipped: source-tree xray.exe not available on this machine.
+            // Engine integration test NOT RUN: source-tree xray.exe is missing
+            // (run tools/fetch-assets.ps1). Reported loudly so a vacuous green
+            // suite cannot hide the coverage gap.
+            Console.WriteLine("[SKIP] XrayServiceTests: source-tree xray.exe not available — engine integration coverage is NOT running.");
+            return;
         }
 
         // Arrange: a real start so the config file is produced and consumed.

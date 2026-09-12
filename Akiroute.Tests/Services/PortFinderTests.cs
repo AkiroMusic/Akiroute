@@ -117,6 +117,84 @@ public class PortFinderTests
         Assert.Equal(0, PortFinder.FindFreePort(65536, 28));
     }
 
+    [Fact]
+    public void FindFreePortPair_ReturnsPreferred_WhenPreferredAndNextAreFree()
+    {
+        // Act: with 3333 and 3334 both free, the preferred port starts the pair.
+        var port = PortFinder.FindFreePortPair(3333, 28);
+
+        // Assert.
+        Assert.Equal(3333, port);
+    }
+
+    [Fact]
+    public void FindFreePortPair_SkipsOddOccupancy_AndReturnsConsecutiveFreePair()
+    {
+        // Arrange: occupy 3333 and 3335..3360 — only 3334 is free, so the first
+        // CONSECUTIVE free pair starts at 3361... which is outside the window;
+        // with 3334+3336 blocked by occupancy the finder must skip past the
+        // whole occupied stretch. Bind 3333..3345 so the first pair is 3346+3347.
+        var listeners = BindRange(3333, 3345);
+        try
+        {
+            var port = PortFinder.FindFreePortPair(3333, 28);
+
+            Assert.True(port >= 3346, $"Expected a pair starting >= 3346, got {port}");
+            Assert.True(PortFinder.IsPortAvailable(port));
+            Assert.True(PortFinder.IsPortAvailable(port + 1));
+        }
+        finally
+        {
+            Release(listeners);
+        }
+    }
+
+    [Fact]
+    public void FindFreePortPair_SkipsPortWhoseNeighborIsOccupied()
+    {
+        // Arrange: occupy ONLY 3334 — 3333 is free but its pair partner is not,
+        // so the finder must continue to the next free pair.
+        var listeners = BindRange(3334, 3334);
+        try
+        {
+            var port = PortFinder.FindFreePortPair(3333, 28);
+
+            Assert.NotEqual(3333, port);
+            Assert.NotEqual(0, port);
+            Assert.True(PortFinder.IsPortAvailable(port));
+            Assert.True(PortFinder.IsPortAvailable(port + 1));
+        }
+        finally
+        {
+            Release(listeners);
+        }
+    }
+
+    [Fact]
+    public void FindFreePortPair_ReturnsZero_WhenWholeProbeRangeIsOccupied()
+    {
+        // Arrange: occupy the entire 3333..3360 probe window.
+        var listeners = BindRange(3333, 3360);
+        try
+        {
+            var port = PortFinder.FindFreePortPair(3333, 28);
+
+            Assert.Equal(0, port);
+        }
+        finally
+        {
+            Release(listeners);
+        }
+    }
+
+    [Fact]
+    public void FindFreePortPair_ReturnsZero_ForInvalidInput()
+    {
+        Assert.Equal(0, PortFinder.FindFreePortPair(0, 28));
+        Assert.Equal(0, PortFinder.FindFreePortPair(65536, 28));
+        Assert.Equal(0, PortFinder.FindFreePortPair(65535, 28)); // pair would overflow
+    }
+
     private static int GetFreeEphemeralPort()
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);

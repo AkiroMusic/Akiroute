@@ -45,9 +45,6 @@ public partial class MainViewModel : ObservableObject
         set => SetProperty(ref _isProxyRunning, value);
     }
 
-    /// <summary>Raised after <see cref="SaveSettings"/> persisted the settings.</summary>
-    public event EventHandler? SettingsSaved;
-
     /// <summary>
     /// Creates the coordinator using the real UI dispatcher as the thread marshaler
     /// for all child view models.
@@ -85,7 +82,7 @@ public partial class MainViewModel : ObservableObject
         Settings = new SettingsViewModel(settings, _runOnUiThread);
         Status = new ProxyStatusViewModel(xray, settings, _runOnUiThread);
         Processes = new ProcessListViewModel(monitor, settings, _runOnUiThread);
-        Logs = new LogsViewModel(n => AppLogger.ReadTail(n), () => Status.RecentLogs);
+        Logs = new LogsViewModel(n => AppLogger.ReadTail(n), () => xray.RecentLogs);
 
         IsProxyRunning = Status.IsRunning;
         Status.PropertyChanged += OnStatusPropertyChanged;
@@ -113,21 +110,30 @@ public partial class MainViewModel : ObservableObject
         Nodes.PingAllAsync(cancellationToken);
 
     /// <summary>
-    /// Persists the shared settings (to <see cref="ConfigFilePath"/> when set) and
-    /// raises <see cref="SettingsSaved"/> for the tray/UI to react to.
+    /// Persists the shared settings (to <see cref="ConfigFilePath"/> when set).
+    /// I/O failures are logged and surfaced through
+    /// <see cref="SettingsViewModel.SaveError"/> instead of escaping — most
+    /// callers sit on async-void UI event handlers where an uncaught exception
+    /// would crash the process.
     /// </summary>
     [RelayCommand]
     public void SaveSettings()
     {
-        if (string.IsNullOrEmpty(ConfigFilePath))
+        try
         {
-            SettingsService.Save(_settings);
+            if (string.IsNullOrEmpty(ConfigFilePath))
+            {
+                SettingsService.Save(_settings);
+            }
+            else
+            {
+                SettingsService.Save(_settings, ConfigFilePath);
+            }
         }
-        else
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            SettingsService.Save(_settings, ConfigFilePath);
+            AppLogger.Error($"[MainViewModel] SaveSettings failed: {ex.Message}");
+            Settings.SaveError = string.Format(Loc.Get("Error.SaveFailed"), ex.Message);
         }
-
-        SettingsSaved?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -108,6 +108,11 @@ public partial class ProcessListViewModel : ObservableObject
             // marshaling, so the UI-thread callback never throws.
             cancellationToken.ThrowIfCancellationRequested();
 
+            // Extract icons (cached per path) before the items reach the list.
+            // Requires the WinUI runtime; in its absence extraction fails to
+            // null and the list simply shows no icons.
+            await _monitor.EnsureIconsAsync(snapshot).ConfigureAwait(true);
+
             // Marshal back to the UI thread before touching the bound collection.
             _runOnUiThread(() =>
             {

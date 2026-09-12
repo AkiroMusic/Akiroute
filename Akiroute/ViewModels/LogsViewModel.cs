@@ -28,12 +28,12 @@ public partial class LogsViewModel : ObservableObject
         {
             var value = Loc.Get("Logs.EmptyPlaceholder");
             // Loc.Get returns the key itself when the loader is unavailable;
-            // treat that as a miss and return the Chinese fallback.
-            return value == "Logs.EmptyPlaceholder" ? "（暂无日志）" : value;
+            // treat that as a miss and return the neutral English fallback.
+            return value == "Logs.EmptyPlaceholder" ? "(no logs)" : value;
         }
         catch
         {
-            return "（暂无日志）";
+            return "(no logs)";
         }
     }
 
@@ -79,10 +79,32 @@ public partial class LogsViewModel : ObservableObject
         _readEngineLogs = readEngineLogs ?? throw new ArgumentNullException(nameof(readEngineLogs));
     }
 
-    /// <summary>Pulls both log sources and updates display properties.</summary>
+    /// <summary>Pulls both log sources and updates display properties (synchronous).</summary>
     public void Refresh()
     {
         var appLines = _readAppTail(300);
+        var engineLines = _readEngineLogs();
+
+        AppLogText = appLines.Length == 0
+            ? s_emptyPlaceholder
+            : string.Join(Environment.NewLine, appLines);
+
+        EngineLogText = engineLines.Count == 0
+            ? s_emptyPlaceholder
+            : string.Join(Environment.NewLine, engineLines);
+
+        RefreshedAt = DateTimeOffset.Now;
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="Refresh"/>: the app-log tail read (up to a
+    /// 512 KB file) runs on a worker thread so the UI thread never blocks.
+    /// Callers on the UI thread get the property updates marshaled back via the
+    /// UI synchronization context.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        var appLines = await Task.Run(() => _readAppTail(300)).ConfigureAwait(true);
         var engineLines = _readEngineLogs();
 
         AppLogText = appLines.Length == 0

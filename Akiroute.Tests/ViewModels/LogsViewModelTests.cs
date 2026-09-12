@@ -38,8 +38,8 @@ public class LogsViewModelTests
         vm.Refresh();
 
         // Assert: both display strings show the placeholder.
-        Assert.Equal("（暂无日志）", vm.AppLogText);
-        Assert.Equal("（暂无日志）", vm.EngineLogText);
+        Assert.Equal("(No logs)", vm.AppLogText);
+        Assert.Equal("(No logs)", vm.EngineLogText);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class LogsViewModelTests
         vm.Refresh();
 
         // Assert: app side shows placeholder, engine side shows content.
-        Assert.Equal("（暂无日志）", vm.AppLogText);
+        Assert.Equal("(No logs)", vm.AppLogText);
         Assert.Equal("engine-line-1", vm.EngineLogText);
     }
 

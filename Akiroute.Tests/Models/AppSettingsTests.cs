@@ -20,7 +20,57 @@ public class AppSettingsTests
         Assert.False(settings.AutoConnect);
         Assert.Equal(0, settings.SubscriptionAutoUpdateMinutes);
         Assert.False(settings.TunEnabled);
+        Assert.False(settings.StartMinimized);
+        Assert.False(settings.LaunchOnStartup);
         Assert.Equal(AppTheme.System, settings.Theme);
+    }
+
+    [Fact]
+    public void CopyFrom_MutatesInPlace_PreservingCollectionInstances()
+    {
+        // Arrange: a live settings instance with collections that view models
+        // hold references to, and a restore snapshot with different content.
+        var live = new AppSettings { Port = 3333, Mode = ProxyMode.Rule };
+        var liveNodes = live.Nodes;
+        var liveRules = live.ProcessRules;
+        var liveSubs = live.Subscriptions;
+        live.Nodes.Add(new ProxyNode { Id = "old", Name = "old", Address = "a", Port = 1, Type = "ss" });
+
+        var snapshot = new AppSettings
+        {
+            Port = 5555,
+            Mode = ProxyMode.Global,
+            AutoConnect = true,
+            StartMinimized = true,
+            LaunchOnStartup = true,
+            SubscriptionAutoUpdateMinutes = 30,
+            AutoPingMinutes = 15,
+            Theme = AppTheme.Dark,
+            SelectedNodeId = "new",
+        };
+        snapshot.Nodes.Add(new ProxyNode { Id = "new", Name = "new", Address = "b", Port = 2, Type = "ss" });
+        snapshot.ProcessRules.Add(new ProcessRule { ProcessName = "chrome.exe", Action = ProcessAction.Direct });
+
+        // Act.
+        live.CopyFrom(snapshot);
+
+        // Assert: values replaced, SAME collection instances mutated in place.
+        Assert.Equal(5555, live.Port);
+        Assert.Equal(ProxyMode.Global, live.Mode);
+        Assert.True(live.AutoConnect);
+        Assert.True(live.StartMinimized);
+        Assert.True(live.LaunchOnStartup);
+        Assert.Equal(30, live.SubscriptionAutoUpdateMinutes);
+        Assert.Equal(15, live.AutoPingMinutes);
+        Assert.Equal(AppTheme.Dark, live.Theme);
+        Assert.Equal("new", live.SelectedNodeId);
+
+        Assert.Same(liveNodes, live.Nodes);
+        Assert.Same(liveRules, live.ProcessRules);
+        Assert.Same(liveSubs, live.Subscriptions);
+        Assert.Single(live.Nodes);
+        Assert.Equal("new", live.Nodes[0].Id);
+        Assert.Single(live.ProcessRules);
     }
 
     [Fact]

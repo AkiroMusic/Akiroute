@@ -7,6 +7,7 @@ using Akiroute.Services;
 using Akiroute.ViewModels;
 using Akiroute.Views.Controls;
 using Akiroute.Views.Dialogs;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -72,12 +73,19 @@ public sealed partial class MainWindow : Window
         // subscribe per card as containers are realized, and unsubscribe on recycle.
         ProcessesList.ContainerContentChanging += ProcessesList_ContainerContentChanging;
 
+        // Node cards raise NodeClicked on keyboard activation (Enter/Space);
+        // pointer taps flow through NodesList_Tapped below.
+        NodesList.ContainerContentChanging += NodesList_ContainerContentChanging;
+
         // Subscription rows need date formatting on realization.
         SubscriptionsList.ContainerContentChanging += SubscriptionsList_ContainerContentChanging;
 
         // Project the initial proxy state onto the status header DPs.
         PushStatus();
         _vm.Status.PropertyChanged += OnStatusPropertyChanged;
+
+        // Footer version tracks the assembly version.
+        FooterVersionText.Text = $"v{typeof(MainWindow).Assembly.GetName().Version}";
 
         // Persist the shared settings whenever process rules or imports change.
         _vm.Processes.RulesChanged += (_, _) => _vm.SaveSettings();
@@ -87,6 +95,12 @@ public sealed partial class MainWindow : Window
             _vm.Settings.RefreshSubscriptionsView();
             UpdateSubscriptionsEmptyHint();
         };
+
+        // Auto-persist whenever an editable setting changes; this also keeps
+        // the launch-on-startup registry entry and the persisted flag
+        // consistent. The Save button remains as the explicit fallback and
+        // surfaces SaveError.
+        _vm.Settings.SettingsChanged += (_, _) => _vm.SaveSettings();
 
         // Empty-state hint must track the LIVE collection (import/delete), not a
         // one-shot load-time evaluation.
@@ -102,9 +116,31 @@ public sealed partial class MainWindow : Window
             ? Visibility.Visible
             : Visibility.Collapsed;
 
+    /// <summary>Guards <see cref="InitializeUiState"/> against double execution.</summary>
+    private bool _uiStateInitialized;
+
     private void OnRootLoaded(object sender, RoutedEventArgs e)
     {
         Root.Loaded -= OnRootLoaded;
+        InitializeUiState();
+    }
+
+    /// <summary>
+    /// One-shot UI-state initialization: nav selection, settings-control sync,
+    /// subscription view, and the first process scan. Normally triggered by
+    /// Root.Loaded, but ALSO invoked explicitly by App when the window starts
+    /// hidden (StartMinimized) — a never-activated window may not raise Loaded
+    /// until it is first shown, which would defer initialization until the
+    /// user restores it from the tray.
+    /// </summary>
+    internal void InitializeUiState()
+    {
+        if (_uiStateInitialized)
+        {
+            return;
+        }
+
+        _uiStateInitialized = true;
         SelectNav("nodes");
         SyncSettingsControls();
         _vm.Settings.RefreshSubscriptionsView();
@@ -147,7 +183,7 @@ public sealed partial class MainWindow : Window
         }
         else if (tag == "logs")
         {
-            _vm.Logs.Refresh();
+            _ = RefreshLogsSafeAsync();
             FadeInPanel(LogsPanel);
         }
         else if (tag == "settings")
@@ -239,6 +275,38 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Subscribes (or unsubscribes) each realized <see cref="NodeCardControl"/>
+    /// card's keyboard-activation event as the ListView realizes or recycles
+    /// its item containers.
+    /// </summary>
+    private void NodesList_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.ItemContainer.ContentTemplateRoot is not NodeCardControl card)
+        {
+            return;
+        }
+
+        if (args.InRecycleQueue)
+        {
+            card.NodeClicked -= OnNodeCardActivated;
+        }
+        else
+        {
+            card.NodeClicked += OnNodeCardActivated;
+        }
+    }
+
+    private void OnNodeCardActivated(object? sender, EventArgs e)
+    {
+        if (sender is NodeCardControl { Node: ProxyNode node }
+            && !ReferenceEquals(node, _vm.Nodes.SelectedNode))
+        {
+            _vm.Nodes.SelectNode(node);
+            RefreshNodeCards();
+        }
+    }
+
+    /// <summary>
     /// Re-applies the <see cref="NodeCardControl.Node"/> dependency property on every
     /// realized card so cards re-render when their (non-observable) model fields
     /// change — selection highlight, latency badge, and edited identity fields.
@@ -276,21 +344,31 @@ public sealed partial class MainWindow : Window
 
     private async void OnImportClick(object sender, RoutedEventArgs e)
     {
-        var dialog = new ImportDialog { XamlRoot = Content.XamlRoot };
-        var result = await dialog.ShowAsync();
-        if (result != ContentDialogResult.Primary)
-        {
-            return;
-        }
-
+        // async void: the dialog show itself can throw, so the whole flow is
+        // guarded and failures surface through the status header.
         try
         {
+            var dialog = new ImportDialog { XamlRoot = Content.XamlRoot };
+            var result = await dialog.ShowAsync();
+            if (result != ContentDialogResult.Primary)
+            {
+                return;
+            }
+
             if (dialog.IsLinkMode)
             {
                 await _vm.Nodes.ImportAsync(dialog.PastedText);
             }
             else
             {
+                // Plain-HTTP feeds carry node credentials in the clear and can
+                // be tampered with in transit — require an explicit opt-in.
+                if (dialog.SubscriptionUrl?.StartsWith("http://", StringComparison.OrdinalIgnoreCase) == true
+                    && !await ConfirmInsecureSubscriptionAsync(dialog.SubscriptionUrl))
+                {
+                    return;
+                }
+
                 await _vm.Nodes.ImportSubscriptionAsync(dialog.SubscriptionUrl);
             }
 
@@ -305,6 +383,24 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Shows the plain-HTTP subscription confirmation. Returns true only when
+    /// the user explicitly continues.
+    /// </summary>
+    private async Task<bool> ConfirmInsecureSubscriptionAsync(string url)
+    {
+        var confirm = new ContentDialog
+        {
+            Title = Loc.Get("Dialog.HttpSubscribeTitle"),
+            Content = string.Format(Loc.Get("Dialog.HttpSubscribeBody"), url),
+            PrimaryButtonText = Loc.Get("Dialog.HttpSubscribeContinue"),
+            CloseButtonText = Loc.Get("Dialog.Cancel"),
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = Content.XamlRoot,
+        };
+        return await confirm.ShowAsync() == ContentDialogResult.Primary;
+    }
+
     private async void OnEditClick(object sender, RoutedEventArgs e)
     {
         var node = _vm.Nodes.SelectedNode;
@@ -314,7 +410,15 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        await ShowEditNodeDialog(node);
+        // async void: an escaping exception would crash the process.
+        try
+        {
+            await ShowEditNodeDialog(node);
+        }
+        catch (Exception ex)
+        {
+            StatusHeader.ErrorMessage = ex.Message;
+        }
     }
 
     // ---- Processes panel --------------------------------------------------------
@@ -390,7 +494,8 @@ public sealed partial class MainWindow : Window
         MinutesBox.Text = _vm.Settings.SubscriptionAutoUpdateMinutes.ToString();
         PingMinutesBox.Text = _vm.Settings.AutoPingMinutes.ToString();
         AutoConnectToggle.IsOn = _vm.Settings.AutoConnect;
-        TunToggle.IsOn = _vm.Settings.TunEnabled;
+        StartMinimizedToggle.IsOn = _vm.Settings.StartMinimized;
+        LaunchOnStartupToggle.IsOn = _vm.Settings.LaunchOnStartup;
     }
 
     private static void SetComboSelection(ComboBox combo, string tag)
@@ -426,7 +531,11 @@ public sealed partial class MainWindow : Window
 
     private void PortBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (int.TryParse(PortBox.Text.Trim(), out int port))
+        // Accept only values the settings view model keeps (1024-65535);
+        // anything else shows inline feedback.
+        var valid = int.TryParse(PortBox.Text.Trim(), out int port) && port is >= 1024 and <= 65535;
+        PortErrorText.Visibility = valid ? Visibility.Collapsed : Visibility.Visible;
+        if (valid)
         {
             _vm.Settings.Port = port;
         }
@@ -448,6 +557,12 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Debounce timer for the per-subscription interval box; the settings save
+    /// runs 400 ms after typing pauses.
+    /// </summary>
+    private DispatcherQueueTimer? _subAutoUpdateSaveTimer;
+
     /// <summary>Updates the per-subscription auto-update interval override.</summary>
     private void SubAutoUpdateBox_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -456,15 +571,33 @@ public sealed partial class MainWindow : Window
             && minutes >= 0)
         {
             entry.AutoUpdateMinutes = minutes;
-            _vm.SaveSettings();
+            DebounceSubscriptionSave();
         }
     }
+
+    /// <summary>Schedules the settings save 400 ms after the last keystroke.</summary>
+    private void DebounceSubscriptionSave()
+    {
+        _subAutoUpdateSaveTimer ??= DispatcherQueue.CreateTimer();
+        _subAutoUpdateSaveTimer.Interval = TimeSpan.FromMilliseconds(400);
+        _subAutoUpdateSaveTimer.IsRepeating = false;
+        _subAutoUpdateSaveTimer.Tick -= OnSubAutoUpdateSaveTimerTick;
+        _subAutoUpdateSaveTimer.Tick += OnSubAutoUpdateSaveTimerTick;
+        _subAutoUpdateSaveTimer.Stop();
+        _subAutoUpdateSaveTimer.Start();
+    }
+
+    private void OnSubAutoUpdateSaveTimerTick(DispatcherQueueTimer sender, object args)
+        => _vm.SaveSettings();
 
     private void AutoConnectToggle_Toggled(object sender, RoutedEventArgs e)
         => _vm.Settings.AutoConnect = AutoConnectToggle.IsOn;
 
-    private void TunToggle_Toggled(object sender, RoutedEventArgs e)
-        => _vm.Settings.TunEnabled = TunToggle.IsOn;
+    private void StartMinimizedToggle_Toggled(object sender, RoutedEventArgs e)
+        => _vm.Settings.StartMinimized = StartMinimizedToggle.IsOn;
+
+    private void LaunchOnStartupToggle_Toggled(object sender, RoutedEventArgs e)
+        => _vm.Settings.LaunchOnStartup = LaunchOnStartupToggle.IsOn;
 
     private void OnSaveSettingsClick(object sender, RoutedEventArgs e)
     {
@@ -530,12 +663,18 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            ConfigBackupService.ExportToFile(_vm.Settings.Settings, file.Path);
+            // Serialize + write off the UI thread; the dialog below marshals
+            // back through the await continuation.
+            await Task.Run(() => ConfigBackupService.ExportToFile(_vm.Settings.Settings, file.Path));
 
             var dialog = new ContentDialog
             {
                 Title = Loc.Get("Dialog.BackupSuccess"),
-                Content = string.Format(Loc.Get("Dialog.BackupSuccessDetail"), file.Path),
+                // Backups are plaintext by design — the user must be told the
+                // file carries node credentials in the clear.
+                Content = string.Format(Loc.Get("Dialog.BackupSuccessDetail"), file.Path)
+                          + Environment.NewLine + Environment.NewLine
+                          + Loc.Get("Dialog.BackupPlaintextWarning"),
                 CloseButtonText = Loc.Get("Dialog.Ok"),
                 XamlRoot = Content.XamlRoot,
             };
@@ -556,11 +695,31 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// Imports a backup JSON file and overwrites the live config atomically.
-    /// In-session VMs keep the old state until restart — any post-restore
-    /// in-app save would overwrite the restored file with stale VM state,
-    /// so a prompt restart is required (documented known limitation).
+    /// After the file is written, the restored snapshot is ALSO applied to the
+    /// live in-memory settings (and every settings-driven UI surface re-syncs) —
+    /// otherwise the close-time window-bounds save would overwrite the restored
+    /// file with the stale pre-restore state.
     /// </summary>
     private async void OnRestoreConfigClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await RestoreConfigCoreAsync();
+        }
+        catch (Exception ex)
+        {
+            var errorDialog = new ContentDialog
+            {
+                Title = Loc.Get("Dialog.RestoreFail"),
+                Content = string.Format(Loc.Get("Dialog.RestoreFailDetail"), ex.Message),
+                CloseButtonText = Loc.Get("Dialog.Ok"),
+                XamlRoot = Content.XamlRoot,
+            };
+            await errorDialog.ShowAsync();
+        }
+    }
+
+    private async Task RestoreConfigCoreAsync()
     {
         var picker = new FileOpenPicker();
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -585,22 +744,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // Write restored config to the live settings path atomically. The save
-        // (and the success dialog that must only appear after it) is guarded so
-        // an I/O failure surfaces as a dialog instead of crashing the process
-        // from this async void handler.
+        // Write restored config to the live settings path atomically, off the
+        // UI thread; an I/O failure surfaces as a dialog instead of crashing
+        // this async void handler.
         try
         {
-            SettingsService.Save(restored);
-
-            var dialog = new ContentDialog
-            {
-                Title = Loc.Get("Dialog.RestoreSuccess"),
-                Content = Loc.Get("Dialog.RestoreSuccessDetail"),
-                CloseButtonText = Loc.Get("Dialog.Ok"),
-                XamlRoot = Content.XamlRoot,
-            };
-            await dialog.ShowAsync();
+            await Task.Run(() => SettingsService.Save(restored));
         }
         catch (Exception ex)
         {
@@ -612,7 +761,28 @@ public sealed partial class MainWindow : Window
                 XamlRoot = Content.XamlRoot,
             };
             await errorDialog.ShowAsync();
+            return;
         }
+
+        // Apply the restored snapshot to the live settings instance (mutated
+        // in place — view models hold references to it), then re-sync every
+        // settings-driven UI surface.
+        App.ApplyRestoredSettings(restored);
+        StartupHelper.ReconcileLaunchOnStartup(restored.LaunchOnStartup);
+        _vm.Settings.RefreshWrappersFromSettings();
+        SyncSettingsControls();
+        _vm.Nodes.ReloadFromSettings();
+        UpdateSubscriptionsEmptyHint();
+        UpdateNodesEmptyHint();
+
+        var dialog = new ContentDialog
+        {
+            Title = Loc.Get("Dialog.RestoreSuccess"),
+            Content = Loc.Get("Dialog.RestoreSuccessDetail"),
+            CloseButtonText = Loc.Get("Dialog.Ok"),
+            XamlRoot = Content.XamlRoot,
+        };
+        await dialog.ShowAsync();
     }
 
     // ---- Node context menu -------------------------------------------------------
@@ -621,7 +791,15 @@ public sealed partial class MainWindow : Window
     {
         if (sender is MenuFlyoutItem { DataContext: ProxyNode node })
         {
-            await ShowEditNodeDialog(node);
+            // async void: an escaping exception would crash the process.
+            try
+            {
+                await ShowEditNodeDialog(node);
+            }
+            catch (Exception ex)
+            {
+                StatusHeader.ErrorMessage = ex.Message;
+            }
         }
     }
 
@@ -680,8 +858,19 @@ public sealed partial class MainWindow : Window
     }
 
     private void OnRefreshLogsClick(object sender, RoutedEventArgs e)
+        => _ = RefreshLogsSafeAsync();
+
+    /// <summary>Refreshes both log views off the UI thread; never throws.</summary>
+    private async Task RefreshLogsSafeAsync()
     {
-        _vm.Logs.Refresh();
+        try
+        {
+            await _vm.Logs.RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusHeader.ErrorMessage = ex.Message;
+        }
     }
 
     // ---- Process context menu -----------------------------------------------------

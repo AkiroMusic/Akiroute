@@ -16,7 +16,7 @@ namespace Akiroute.Services;
 /// Testability design: all pure logic lives in <see cref="GetCurrentProcesses"/> and
 /// reads its input through the injectable enumerator seam, so the x64 test host can
 /// feed hand-built <see cref="ProcessRecord"/>s without ever initializing the WinUI
-/// runtime. WinUI-dependent icon extraction is confined to <see cref="EnsureIcons"/>
+/// runtime. WinUI-dependent icon extraction is confined to <see cref="EnsureIconsAsync"/>
 /// (and <see cref="IconHelper"/>), which unit tests never call.
 /// </summary>
 public sealed class ProcessMonitorService
@@ -193,11 +193,13 @@ public sealed class ProcessMonitorService
 
     /// <summary>
     /// Ensures each item has its icon extracted, cached, and assigned. Requires the
-    /// WinUI runtime: real extraction is delegated to <see cref="IconHelper.TryGetIcon"/>
-    /// and is only attempted once per path. The UI layer calls this on the UI
-    /// thread; unit tests never do.
+    /// WinUI runtime: real extraction is delegated to <see cref="IconHelper.TryGetIconAsync"/>
+    /// and is only attempted once per path. Await from the UI thread — the
+    /// continuation that assigns <see cref="ProcessInfoItem.Icon"/> runs on the
+    /// calling context. Unit tests never call this (their WinUI runtime is not
+    /// initialized, so extraction fails harmlessly to null).
     /// </summary>
-    public void EnsureIcons(IEnumerable<ProcessInfoItem> items)
+    public async Task EnsureIconsAsync(IEnumerable<ProcessInfoItem> items)
     {
         ArgumentNullException.ThrowIfNull(items);
 
@@ -208,10 +210,17 @@ public sealed class ProcessMonitorService
                 continue;
             }
 
-            // GetOrAdd stores a sentinel on failure so a missing icon is only
-            // attempted once; the dictionary never holds null (GetOrAdd forbids it).
-            var icon = _iconCache.GetOrAdd(item.Path, static path => IconHelper.TryGetIcon(path) ?? IconCacheMiss);
-            item.Icon = ReferenceEquals(icon, IconCacheMiss) ? null : icon;
+            // A cached sentinel marks a previous extraction failure so a missing
+            // icon is only attempted once; the dictionary never holds null.
+            if (_iconCache.TryGetValue(item.Path, out var cached))
+            {
+                item.Icon = ReferenceEquals(cached, IconCacheMiss) ? null : cached;
+                continue;
+            }
+
+            var icon = await IconHelper.TryGetIconAsync(item.Path).ConfigureAwait(true);
+            _iconCache[item.Path] = icon ?? IconCacheMiss;
+            item.Icon = icon;
         }
     }
 

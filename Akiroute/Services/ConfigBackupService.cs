@@ -9,16 +9,22 @@ namespace Akiroute.Services;
 ///
 /// <para><b>Export</b>: serializes an <see cref="AppSettings"/> instance to a
 /// user-chosen JSON file. The backup protects accumulated nodes, process rules,
-/// and subscriptions so they survive a config reset or machine migration. Writes
-/// are atomic (tmp+move) — delegates to <see cref="SettingsService.Save(AppSettings, string)"/>
-/// to reuse its lock/retry logic and avoid duplication.</para>
+/// and subscriptions so they survive a config reset or machine migration.
+/// Backups are deliberately written as PLAINTEXT (unlike the at-rest encrypted
+/// live config) so they stay portable across machines — the UI warns the user
+/// that the file carries credentials in the clear. Writes are atomic
+/// (tmp+move) — delegates to
+/// <see cref="SettingsService.Save(AppSettings, string, bool)"/> to reuse its
+/// lock/retry logic and avoid duplication.</para>
 ///
 /// <para><b>Import</b>: reads a backup JSON file and deserializes it into a
-/// validated <see cref="AppSettings"/> object. The returned object is
+/// validated <see cref="AppSettings"/> object. Both plaintext backups and a
+/// DPAPI-encrypted copy of the live config are accepted (an encrypted copy is
+/// only restorable on the same Windows user/machine). The returned object is
 /// independent from the live config — the caller decides when (and whether)
 /// to apply it. Import never throws on user-facing paths: missing files,
-/// unreadable files, and invalid JSON all return <c>null</c> with a
-/// diagnostic trace.</para>
+/// unreadable files, invalid JSON, and undecryptable payloads all return
+/// <c>null</c> with a diagnostic trace.</para>
 /// </summary>
 public static class ConfigBackupService
 {
@@ -37,16 +43,21 @@ public static class ConfigBackupService
     {
         // Delegate to SettingsService.Save to reuse its atomic tmp+move
         // mechanics, SaveLock serialization, and single-retry semantics.
+        // encrypt: false — backups are PLAINTEXT by design (portable across
+        // machines); the UI warns the user about the credential exposure.
         // Duplicating that logic here would violate DRY and risk drift.
-        SettingsService.Save(settings, filePath);
+        SettingsService.Save(settings, filePath, encrypt: false);
     }
 
     /// <summary>
     /// 从备份 JSON 文件中读取配置。
     /// Reads a backup file and deserializes into <see cref="AppSettings"/>.
-    /// Returns <c>null</c> when the file is missing, unreadable, or contains
-    /// invalid JSON — never throws on user-facing paths. Failures are logged
-    /// to <see cref="Debug"/> output for diagnostics.
+    /// Accepts plaintext backups AND a DPAPI-encrypted copy of the live
+    /// config (restorable on the same Windows user/machine only).
+    /// Returns <c>null</c> when the file is missing, unreadable, contains
+    /// invalid JSON, or is encrypted for a different user/machine — never
+    /// throws on user-facing paths. Failures are logged to <see cref="Debug"/>
+    /// output for diagnostics.
     /// </summary>
     /// <param name="filePath">Path to the backup JSON file.</param>
     /// <returns>The deserialized settings, or <c>null</c> on any read/deserialize failure.</returns>
@@ -63,6 +74,22 @@ public static class ConfigBackupService
             // surface a user-friendly "文件无法读取" message.
             Debug.WriteLine($"[ConfigBackupService] Cannot read backup file {filePath}: {ex.Message}");
             return null;
+        }
+
+        // An encrypted copy of the live config: unwrap it first. A blob
+        // encrypted for a different Windows user/machine cannot be decrypted
+        // here and is reported as invalid, like any other unreadable backup.
+        if (SettingsEncryption.IsEncryptedPayload(json))
+        {
+            try
+            {
+                json = SettingsEncryption.DecryptPayloadToJson(json);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ConfigBackupService] Cannot decrypt backup file {filePath}: {ex.Message}");
+                return null;
+            }
         }
 
         try

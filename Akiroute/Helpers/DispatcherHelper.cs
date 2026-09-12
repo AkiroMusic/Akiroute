@@ -40,12 +40,14 @@ public static class DispatcherHelper
         }
 
         // Capture the enqueue result; when the dispatcher queue is shutting down
-        // TryEnqueue returns false. The enqueued actions are lightweight UI property
-        // updates (SetProperty on ObservableObject), so running them inline is safe
-        // and avoids silently dropping state transitions during shutdown.
+        // TryEnqueue returns false. The enqueued actions are usually lightweight
+        // UI property updates (SetProperty on ObservableObject), so running them
+        // inline is preferred over silently dropping state transitions during
+        // shutdown. Inline execution can still touch bound collections from a
+        // non-UI thread during teardown; the log warning marks that window.
         if (!queue.TryEnqueue(() => action()))
         {
-            Debug.WriteLine("[DispatcherHelper] TryEnqueue failed (queue shutting down); executing action inline.");
+            AppLogger.Warn("[DispatcherHelper] TryEnqueue failed (queue shutting down); executing action inline.");
             action();
         }
     }

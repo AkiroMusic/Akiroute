@@ -48,7 +48,6 @@ public partial class ProxyStatusViewModel : ObservableObject
     private bool _isStarting;
     private string? _statusMessage;
     private string? _lastError;
-    private IReadOnlyList<string> _recentLogs = Array.Empty<string>();
     private double _throughputBytesPerSecond;
     private int _localPort;
 
@@ -78,13 +77,6 @@ public partial class ProxyStatusViewModel : ObservableObject
     {
         get => _lastError;
         set => SetProperty(ref _lastError, value);
-    }
-
-    /// <summary>Most recent xray log lines (tail 20), in arrival order.</summary>
-    public IReadOnlyList<string> RecentLogs
-    {
-        get => _recentLogs;
-        set => SetProperty(ref _recentLogs, value);
     }
 
     /// <summary>Rolling throughput estimate in bytes per second.</summary>
@@ -134,11 +126,11 @@ public partial class ProxyStatusViewModel : ObservableObject
 
         IsRunning = xray.IsRunning;
         LocalPort = xray.LocalPort;
-        RecentLogs = xray.RecentLogs;
         ApplyState(xray.IsRunning ? XrayServiceState.Running : XrayServiceState.Stopped);
 
+        // The engine log page reads the engine ring buffer on demand
+        // (LogsViewModel → xray.RecentLogs), so LogReceived is not subscribed.
         xray.StateChanged += OnXrayStateChanged;
-        xray.LogReceived += OnXrayLogReceived;
     }
 
     /// <summary>
@@ -235,12 +227,6 @@ public partial class ProxyStatusViewModel : ObservableObject
     private void OnXrayStateChanged(object? sender, XrayServiceState state)
     {
         _runOnUiThread(() => ApplyState(state));
-    }
-
-    /// <summary>Marshals the xray log tail snapshot onto the UI thread.</summary>
-    private void OnXrayLogReceived(object? sender, string line)
-    {
-        _runOnUiThread(() => RecentLogs = _xray.RecentLogs);
     }
 
     /// <summary>Maps an xray lifecycle state onto the bound properties.</summary>

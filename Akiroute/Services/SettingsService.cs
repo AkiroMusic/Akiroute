@@ -25,6 +25,11 @@ public static class SettingsService
     /// A missing file returns defaults. A corrupt, empty, or whitespace-only
     /// file is renamed to "&lt;name&gt;.corrupt-&lt;yyyyMMddHHmmss&gt;" before
     /// defaults are returned. Failures are logged to Debug output.
+    ///
+    /// Reads both the current DPAPI-encrypted wrapper format and the legacy
+    /// plain JSON format (older builds). A file encrypted for a DIFFERENT
+    /// Windows user/machine cannot be decrypted — it is treated exactly like a
+    /// corrupt file: renamed and defaults returned, so the app always starts.
     /// </summary>
     public static AppSettings Load(string configFilePath)
     {
@@ -46,6 +51,26 @@ public static class SettingsService
             return new AppSettings();
         }
 
+        // Encrypted wrapper format: unwrap before deserializing. A blob that
+        // cannot be decrypted (file copied from another user/machine, or
+        // tampered) is handled via the corrupt-file path — never thrown.
+        if (SettingsEncryption.IsEncryptedPayload(json))
+        {
+            try
+            {
+                json = SettingsEncryption.DecryptPayloadToJson(json);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[SettingsService] Cannot decrypt {configFilePath}: {ex.Message}");
+                AppLogger.Warn(
+                    $"[SettingsService] Settings file is encrypted for a different Windows user/machine or is damaged; " +
+                    $"renamed and defaults returned: {configFilePath}");
+                RenameCorruptFile(configFilePath);
+                return new AppSettings();
+            }
+        }
+
         try
         {
             return JsonSerializer.Deserialize(json, AppJsonSerializerContext.Default.AppSettings) ?? new AppSettings();
@@ -58,26 +83,33 @@ public static class SettingsService
         }
     }
 
-    /// <summary>Saves settings to the default config file (atomic, thread-safe).</summary>
+    /// <summary>Saves settings to the default config file (atomic, thread-safe, DPAPI-encrypted).</summary>
     public static void Save(AppSettings settings)
     {
         AppPaths.EnsureDirectories();
         Save(settings, AppPaths.ConfigFile);
     }
 
+    /// <summary>Saves settings to the given path with the default at-rest encryption.</summary>
+    public static void Save(AppSettings settings, string configFilePath)
+        => Save(settings, configFilePath, encrypt: true);
+
     /// <summary>
     /// Atomically saves <paramref name="settings"/> to <paramref name="configFilePath"/>:
-    /// the JSON is written to "&lt;path&gt;.tmp" first, then moved over the target.
-    /// If the target is locked the move is retried once after 50 ms; a second
-    /// failure is rethrown, never swallowed (the leftover ".tmp" is cleaned up
-    /// best-effort). Writes are serialized by a static lock.
+    /// the JSON is DPAPI-encrypted by default (CurrentUser scope — see
+    /// <see cref="SettingsEncryption"/>; <paramref name="encrypt"/> = false
+    /// writes plaintext, used by the backup EXPORT flow so backups stay
+    /// portable), written to "&lt;path&gt;.tmp" first, then moved over the
+    /// target. If the target is locked the move is retried once after 50 ms; a
+    /// second failure is rethrown, never swallowed (the leftover ".tmp" is
+    /// cleaned up best-effort). Writes are serialized by a static lock.
     /// Trade-off note: the retry <see cref="Thread.Sleep(int)"/> runs under
     /// <see cref="SaveLock"/> and can block the calling (UI) thread for up to
     /// ~50 ms when the target file is transiently locked — accepted because
     /// saves are infrequent and the alternative (async rework of every caller)
     /// outweighs the rare stutter.
     /// </summary>
-    public static void Save(AppSettings settings, string configFilePath)
+    public static void Save(AppSettings settings, string configFilePath, bool encrypt)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentException.ThrowIfNullOrEmpty(configFilePath);
@@ -89,10 +121,13 @@ public static class SettingsService
 
         var tmpPath = fullPath + ".tmp";
         var json = JsonSerializer.Serialize(settings, AppJsonSerializerContext.Default.AppSettings);
+        // Encrypt at the persistence boundary so credentials never touch disk
+        // in plaintext (legacy plaintext files migrate on their next save).
+        var payload = encrypt ? SettingsEncryption.EncryptToPayload(json) : json;
 
         lock (SaveLock)
         {
-            File.WriteAllText(tmpPath, json);
+            File.WriteAllText(tmpPath, payload);
             try
             {
                 File.Move(tmpPath, fullPath, overwrite: true);

@@ -27,7 +27,10 @@ public partial class App : Application
     private TrayIconService? _tray;
     private XrayService? _xray;
     private System.Threading.Mutex? _singleInstanceMutex;
-    private AppSettings? _settings;
+
+    // Static (not instance) so the config-restore flow in MainWindow can reach
+    // the live settings instance without threading an App reference around.
+    private static AppSettings? _settings;
     private bool _allowExit;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -57,13 +60,16 @@ public partial class App : Application
         _singleInstanceMutex = new System.Threading.Mutex(true, "Local\\Akiroute.SingleInstance", out bool createdNew);
         if (!createdNew)
         {
-            MessageBoxW(IntPtr.Zero, "Akiroute 已在运行\nAkiroute is already running", "Akiroute", 0x00000040 /* MB_ICONINFORMATION */);
+            MessageBoxW(IntPtr.Zero, Loc.Get("App.AlreadyRunning"), "Akiroute", 0x00000040 /* MB_ICONINFORMATION */);
             Environment.Exit(0);
             return;
         }
 
-        // --- Startup orphan cleanup: kill leftover xray from a previous crash ---
+        // --- Startup orphan cleanup: kill leftover xray from a previous crash
+        // and drop the credential-bearing temp config it may have abandoned. ---
         XrayService.KillOrphanedEngine(Helpers.AppPaths.XrayExe);
+        XrayService.CleanupOrphanedTempConfig();
+        XrayService.RotateEngineLogs();
 
         // --- Compose the service graph and the main view model. ---
         var settings = SettingsService.Load();
@@ -74,10 +80,9 @@ public partial class App : Application
         _settings = settings;
         var vm = new MainViewModel(settings, _xray, ping, monitor);
 
-        // Persist the shared settings whenever nodes are imported or process
-        // routing rules change (the settings panel persists via its own Save).
-        vm.Nodes.NodesImported += (_, _) => vm.SaveSettings();
-        vm.Processes.RulesChanged += (_, _) => vm.SaveSettings();
+        // Align the auto-start registry entry with the persisted setting
+        // (re-register after an exe move, or clean up a stale entry).
+        StartupHelper.ReconcileLaunchOnStartup(settings.LaunchOnStartup);
 
         // --- Launch the main window. ---
         var window = new Views.MainWindow(vm);
@@ -110,7 +115,19 @@ public partial class App : Application
             exitApp: ExitApp);
         _tray.Start();
 
-        window.Activate();
+        // 后台启动: skip activation so the window stays hidden; tray icon
+        // provides access. The window is still constructed so the app can
+        // function (tray, timer, etc. all wired above). A never-activated
+        // window may not raise Root.Loaded until first shown, so the one-shot
+        // UI initialization runs explicitly here.
+        if (settings.StartMinimized)
+        {
+            window.InitializeUiState();
+        }
+        else
+        {
+            window.Activate();
+        }
 
         // Restore saved window bounds (physical pixels, matching the original Resize pattern).
         // Multi-monitor: enumerate all displays, pick the one with the largest overlap
@@ -332,6 +349,25 @@ public partial class App : Application
                 MainWindow?.Close();
             }
         }
+    }
+
+    /// <summary>
+    /// Applies a restored settings snapshot to the LIVE settings instance so
+    /// close-time persistence (window bounds) cannot overwrite the restored
+    /// file with stale in-memory state. The shared instance is mutated in place
+    /// because view models and services hold references to it.
+    /// </summary>
+    public static void ApplyRestoredSettings(AppSettings restored)
+    {
+        ArgumentNullException.ThrowIfNull(restored);
+
+        if (_settings is null)
+        {
+            return;
+        }
+
+        _settings.CopyFrom(restored);
+        AppLogger.Info("Restored configuration applied to the live settings");
     }
 
     /// <summary>Persists the current window position and size to AppSettings.</summary>

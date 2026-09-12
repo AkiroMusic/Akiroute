@@ -63,6 +63,8 @@ public sealed class TrayIconService : IDisposable
     /// <summary>GC root for the native window procedure delegate.</summary>
     private readonly WndProcDelegate _wndProc;
 
+    // IntPtr cannot carry the `volatile` modifier (it is a struct); all
+    // cross-thread access goes through Volatile.Read / Volatile.Write.
     private IntPtr _hwnd;
     private IntPtr _hIcon;
     private Thread? _thread;
@@ -146,12 +148,14 @@ public sealed class TrayIconService : IDisposable
         // join while holding the lock would deadlock a concurrent Start().
         if (thread is { IsAlive: true })
         {
-            // WM_QUIT retrieved by GetMessage returns 0 and ends the loop.
-            PostMessageW(_hwnd, WM_QUIT, IntPtr.Zero, IntPtr.Zero);
+            // WM_QUIT retrieved by GetMessage returns 0 and ends the loop. The
+            // hwnd read must be volatile: the tray thread may still be creating
+            // the window (or already tearing it down) when Dispose runs.
+            PostMessageW(Volatile.Read(ref _hwnd), WM_QUIT, IntPtr.Zero, IntPtr.Zero);
             thread.Join(2000);
         }
 
-        _hwnd = IntPtr.Zero;
+        Volatile.Write(ref _hwnd, IntPtr.Zero);
     }
 
     /// <summary>
@@ -160,9 +164,27 @@ public sealed class TrayIconService : IDisposable
     /// </summary>
     private void ThreadMain()
     {
-        _hwnd = CreateMessageWindow();
-        if (_hwnd == IntPtr.Zero)
+        var hwnd = CreateMessageWindow();
+        Volatile.Write(ref _hwnd, hwnd);
+        if (hwnd == IntPtr.Zero)
         {
+            return;
+        }
+
+        // Dispose may have been requested while the window was being created;
+        // in that case never register the icon and exit the pump immediately
+        // (a missed WM_QUIT would otherwise leave the thread — and the tray
+        // icon — alive until process exit).
+        bool disposed;
+        lock (_lifecycleGate)
+        {
+            disposed = _disposed;
+        }
+
+        if (disposed)
+        {
+            DestroyWindow(hwnd);
+            Volatile.Write(ref _hwnd, IntPtr.Zero);
             return;
         }
 
@@ -181,8 +203,8 @@ public sealed class TrayIconService : IDisposable
             _hIcon = IntPtr.Zero;
         }
 
-        DestroyWindow(_hwnd);
-        _hwnd = IntPtr.Zero;
+        DestroyWindow(hwnd);
+        Volatile.Write(ref _hwnd, IntPtr.Zero);
     }
 
     /// <summary>Marshals an action onto the app's UI dispatcher queue.</summary>

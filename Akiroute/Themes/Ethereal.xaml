@@ -234,10 +234,10 @@
         <Setter Property="Foreground" Value="{ThemeResource EtTextSecondaryBrush}" />
     </Style>
 
-    <!-- Footer: 11px tertiary -->
+    <!-- Footer: 12px tertiary (11px fell below the WCAG-recommended minimum) -->
     <Style x:Key="EtFooterStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource EtFontSans}" />
-        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{ThemeResource EtTextTertiaryBrush}" />
     </Style>
 

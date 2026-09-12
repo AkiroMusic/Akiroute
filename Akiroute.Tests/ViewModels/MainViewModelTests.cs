@@ -32,13 +32,13 @@ public class MainViewModelTests
 
         await vm.ToggleProxyAsync();
 
-        Assert.Equal("未选择节点", vm.Status.LastError);
+        Assert.Equal("No node selected", vm.Status.LastError);
         Assert.False(vm.Status.IsRunning);
         Assert.False(vm.IsProxyRunning);
     }
 
     [Fact]
-    public void SaveSettings_WritesSettingsToTempFileAndRaisesSettingsSaved()
+    public void SaveSettings_WritesSettingsToTempFileWithoutError()
     {
         var dir = Path.Combine(Path.GetTempPath(), "akiroute-tests-main", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
@@ -48,13 +48,11 @@ public class MainViewModelTests
             var settings = new AppSettings { Port = 4242 };
             var vm = NewViewModel(settings);
             vm.ConfigFilePath = path;
-            var raised = 0;
-            vm.SettingsSaved += (_, _) => raised++;
 
             vm.SaveSettings();
 
             Assert.True(File.Exists(path));
-            Assert.Equal(1, raised);
+            Assert.Null(vm.Settings.SaveError);
 
             var loaded = SettingsService.Load(path);
             Assert.Equal(4242, loaded.Port);

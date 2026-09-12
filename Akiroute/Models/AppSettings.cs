@@ -67,8 +67,18 @@ public class AppSettings
     /// <summary>自动测速间隔（分钟），0 表示关闭自动测速。</summary>
     public int AutoPingMinutes { get; set; }
 
-    /// <summary>Route traffic through the Windows TUN adapter.</summary>
+    /// <summary>
+    /// Route traffic through the Windows TUN adapter. RESERVED, currently NOT
+    /// implemented by <see cref="Services.XrayConfigBuilder"/> — no UI exposes
+    /// it and it must stay false until TUN support lands.
+    /// </summary>
     public bool TunEnabled { get; set; }
+
+    /// <summary>启动时最小化到托盘（Start minimized to tray）。</summary>
+    public bool StartMinimized { get; set; }
+
+    /// <summary>开机自动启动（Launch on Windows login via HKCU Run key）。</summary>
+    public bool LaunchOnStartup { get; set; }
 
     /// <summary>Application theme preference.</summary>
     public AppTheme Theme { get; set; } = AppTheme.System;
@@ -84,4 +94,37 @@ public class AppSettings
 
     /// <summary>Saved window height in physical pixels; null = never saved.</summary>
     public int? WindowHeight { get; set; }
+
+    /// <summary>
+    /// Copies every persisted value from <paramref name="other"/> into this
+    /// instance. Collection-valued properties are mutated in place (clear +
+    /// refill) so view models and services holding references to THIS instance
+    /// observe the new state without any reference swap — the contract the
+    /// config-restore flow depends on.
+    /// </summary>
+    public void CopyFrom(AppSettings other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        SelectedNodeId = other.SelectedNodeId;
+        Nodes.Clear();
+        Nodes.AddRange(other.Nodes);
+        ProcessRules.Clear();
+        ProcessRules.AddRange(other.ProcessRules);
+        Subscriptions.Clear();
+        Subscriptions.AddRange(other.Subscriptions);
+        Mode = other.Mode;
+        Port = other.Port;
+        AutoConnect = other.AutoConnect;
+        SubscriptionAutoUpdateMinutes = other.SubscriptionAutoUpdateMinutes;
+        AutoPingMinutes = other.AutoPingMinutes;
+        TunEnabled = other.TunEnabled;
+        StartMinimized = other.StartMinimized;
+        LaunchOnStartup = other.LaunchOnStartup;
+        Theme = other.Theme;
+        WindowX = other.WindowX;
+        WindowY = other.WindowY;
+        WindowWidth = other.WindowWidth;
+        WindowHeight = other.WindowHeight;
+    }
 }

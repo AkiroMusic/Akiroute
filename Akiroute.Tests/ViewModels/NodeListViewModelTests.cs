@@ -298,6 +298,39 @@ public class NodeListViewModelTests
         Assert.DoesNotContain(nodeC, settings.Nodes);
     }
 
+    [Fact]
+    public void ReloadFromSettings_ReplacesRepositoryAndRestoresSelection()
+    {
+        // Arrange: a live VM with one node; the settings list is then refilled
+        // in place (as the config-restore flow does) and the VM must re-sync.
+        var settings = new AppSettings();
+        var vm = NewViewModel(settings);
+        vm.AddNode(new ProxyNode { Id = "old", Name = "old", Address = "1.1.1.1", Port = 1, Type = "ss" });
+
+        settings.Nodes.Clear();
+        settings.Nodes.Add(new ProxyNode { Id = "new-a", Name = "new-a", Address = "2.2.2.2", Port = 2, Type = "ss" });
+        settings.Nodes.Add(new ProxyNode
+        {
+            Id = "new-b",
+            Name = "new-b",
+            Address = "3.3.3.3",
+            Port = 3,
+            Type = "ss",
+        });
+        settings.SelectedNodeId = "new-b";
+
+        // Act.
+        vm.ReloadFromSettings();
+
+        // Assert: repository and projection match the new settings content and
+        // the persisted selection is restored.
+        Assert.Equal(2, vm.Nodes.Count);
+        Assert.Null(vm.Nodes.FirstOrDefault(n => n.Id == "old"));
+        Assert.NotNull(vm.SelectedNode);
+        Assert.Equal("new-b", vm.SelectedNode!.Id);
+        Assert.True(vm.SelectedNode.IsSelected);
+    }
+
     private static NodeListViewModel NewViewModel(AppSettings settings)
     {
         var ping = new PingService(new StubTester());
@@ -559,8 +592,8 @@ public class NodeListViewModelTests
         Assert.Contains(settings.Nodes, n => n.Address == "third.com" && n.SourceSubscriptionId == entry.Id);
 
         // Verify the summary counts.
-        Assert.Contains("新增 1", result);
-        Assert.Contains("移除 1", result);
+        Assert.Contains("1 added", result);
+        Assert.Contains("1 removed", result);
     }
 
     [Fact]
@@ -615,6 +648,6 @@ public class NodeListViewModelTests
         // LastUpdated unchanged.
         Assert.Equal(preUpdate, entry.LastUpdated);
         // Result string indicates failure.
-        Assert.Contains("订阅获取失败", result);
+        Assert.Contains("Subscription fetch failed", result);
     }
 }

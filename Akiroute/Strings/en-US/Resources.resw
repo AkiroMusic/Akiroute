@@ -198,6 +198,24 @@
   <data name="SettingsTun.OffContent" xml:space="preserve">
     <value>Off</value>
   </data>
+  <data name="SettingsStartMinimized.Header" xml:space="preserve">
+    <value>Start minimized to tray</value>
+  </data>
+  <data name="SettingsStartMinimized.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="SettingsStartMinimized.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="SettingsLaunchOnStartup.Header" xml:space="preserve">
+    <value>Launch on startup</value>
+  </data>
+  <data name="SettingsLaunchOnStartup.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="SettingsLaunchOnStartup.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
   <data name="SettingsAppearanceLabel.Text" xml:space="preserve">
     <value>Appearance &amp; Updates</value>
   </data>
@@ -380,6 +398,9 @@
   <data name="Dialog.BackupSuccessDetail" xml:space="preserve">
     <value>Config exported to: {0}</value>
   </data>
+  <data name="Dialog.BackupPlaintextWarning" xml:space="preserve">
+    <value>⚠ This file contains node credentials in PLAINTEXT (kept portable so it can restore on any machine). Store it securely and delete it when no longer needed.</value>
+  </data>
   <data name="Dialog.BackupFail" xml:space="preserve">
     <value>Backup Failed</value>
   </data>
@@ -393,13 +414,29 @@
     <value>Restore Successful</value>
   </data>
   <data name="Dialog.RestoreSuccessDetail" xml:space="preserve">
-    <value>Restore successful, restart to apply</value>
+    <value>Configuration restored and applied</value>
   </data>
   <data name="Dialog.RestoreFailDetail" xml:space="preserve">
     <value>Failed to write config: {0}</value>
   </data>
   <data name="Dialog.Ok" xml:space="preserve">
     <value>OK</value>
+  </data>
+  <data name="Dialog.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+
+  <!-- Plain-HTTP subscription confirmation -->
+  <data name="Dialog.HttpSubscribeTitle" xml:space="preserve">
+    <value>Insecure subscription URL</value>
+  </data>
+  <data name="Dialog.HttpSubscribeBody" xml:space="preserve">
+    <value>This subscription uses plain HTTP, so its contents (including node credentials) can be read or modified in transit. Continue anyway?
+
+{0}</value>
+  </data>
+  <data name="Dialog.HttpSubscribeContinue" xml:space="preserve">
+    <value>Add anyway</value>
   </data>
 
   <!-- EditNodeDialog validation strings -->
@@ -424,6 +461,29 @@
   <!-- SettingsViewModel save error (for future use) -->
   <data name="Error.SaveFailed" xml:space="preserve">
     <value>Save failed: {0}</value>
+  </data>
+
+  <!-- Auto-start registry update failure -->
+  <data name="Error.LaunchOnStartupFailed" xml:space="preserve">
+    <value>Failed to update the Windows auto-start registration. Details are in the app log.</value>
+  </data>
+
+  <!-- Inline port validation feedback -->
+  <data name="SettingsPortInvalid.Text" xml:space="preserve">
+    <value>Invalid — use 1024-65535</value>
+  </data>
+
+  <!-- Single-instance native message box -->
+  <data name="App.AlreadyRunning" xml:space="preserve">
+    <value>Akiroute is already running.</value>
+  </data>
+
+  <!-- Subscription row (per-item) strings -->
+  <data name="SubAutoUpdateBox.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Override the global auto-update interval for this subscription (0 = follow global)</value>
+  </data>
+  <data name="SubRemoveBtn.AutomationProperties.Name" xml:space="preserve">
+    <value>Remove subscription</value>
   </data>
 
   <!-- TrayIconService strings (for future use) -->

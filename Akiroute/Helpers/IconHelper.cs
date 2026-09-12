@@ -22,8 +22,11 @@ public static class IconHelper
     /// image, or an uninitialized WinUI runtime — without throwing out of the
     /// method. All GDI/COM handles (Icon, Bitmap, stream) are released in a
     /// finally block so repeated refreshes cannot leak handles (plan §7.4).
+    ///
+    /// Awaiting <c>SetSourceAsync</c> keeps the UI thread responsive while many
+    /// icons decode on the first process-list refresh.
     /// </summary>
-    public static object? TryGetIcon(string path)
+    public static async Task<object?> TryGetIconAsync(string path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
         {
@@ -42,19 +45,15 @@ public static class IconHelper
             }
 
             // Render the icon to a PNG in memory, then hand the bytes to a
-            // BitmapImage. ConfigureAwait(false) keeps the blocking continuation
-            // off the UI dispatcher, so this never deadlocks when called on it.
+            // BitmapImage. The GDI+ work runs on the caller; only the WinRT
+            // decode is awaited.
             bitmap = icon.ToBitmap();
             stream = new MemoryStream();
             bitmap.Save(stream, ImageFormat.Png);
             stream.Position = 0;
 
             var image = new BitmapImage();
-            image.SetSourceAsync(stream.AsRandomAccessStream())
-                 .AsTask()
-                 .ConfigureAwait(false)
-                 .GetAwaiter()
-                 .GetResult();
+            await image.SetSourceAsync(stream.AsRandomAccessStream());
             return image;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or ExternalException or InvalidOperationException)

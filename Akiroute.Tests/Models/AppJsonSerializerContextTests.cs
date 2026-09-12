@@ -26,6 +26,8 @@ public class AppJsonSerializerContextTests
         AutoConnect = true,
         SubscriptionAutoUpdateMinutes = 30,
         TunEnabled = true,
+        StartMinimized = true,
+        LaunchOnStartup = true,
         Theme = AppTheme.Dark,
         Nodes =
         {
@@ -81,6 +83,8 @@ public class AppJsonSerializerContextTests
         Assert.Equal(settings.Mode, restored.Mode);
         Assert.Equal(settings.Port, restored.Port);
         Assert.Equal(settings.Theme, restored.Theme);
+        Assert.True(restored.StartMinimized);
+        Assert.True(restored.LaunchOnStartup);
         Assert.Single(restored.Nodes);
         Assert.Equal(2, restored.ProcessRules.Count);
         Assert.Single(restored.Subscriptions);

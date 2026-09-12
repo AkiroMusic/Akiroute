@@ -222,6 +222,47 @@ public partial class NodeListViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Re-seeds the repository from <see cref="Settings.Nodes"/> (used by the
+    /// config-restore flow, which refills the shared settings in place). Clears
+    /// the existing repository and filtered projection, then re-applies the
+    /// persisted selection when its node still exists.
+    /// </summary>
+    public void ReloadFromSettings()
+    {
+        lock (_nodesGate)
+        {
+            _allNodes.Clear();
+            foreach (var node in Settings.Nodes)
+            {
+                if (node is not null)
+                {
+                    _allNodes.Add(node);
+                }
+            }
+        }
+
+        _runOnUiThread(() =>
+        {
+            var restoredId = Settings.SelectedNodeId;
+            ProxyNode? selected = null;
+            lock (_nodesGate)
+            {
+                foreach (var node in _allNodes)
+                {
+                    node.IsSelected = node.Id == restoredId;
+                    if (node.IsSelected && selected is null)
+                    {
+                        selected = node;
+                    }
+                }
+            }
+
+            SelectedNode = selected;
+            ApplyFilter();
+        });
+    }
+
+    /// <summary>
     /// Pings every known node concurrently through the injected
     /// <see cref="PingService"/> and writes each measured latency back onto the
     /// node. Never throws: the service swallows cancellation and probe failures.
@@ -251,7 +292,8 @@ public partial class NodeListViewModel : ObservableObject
     /// Marks <paramref name="node"/> as the active selection, clears any prior
     /// selection, and persists the choice to <see cref="AppSettings.SelectedNodeId"/>.
     /// Operates on the full repository so a node hidden by the search filter can
-    /// still be selected.
+    /// still be selected. The persistence EVENT is raised immediately so the
+    /// selection survives a crash (window-close saves alone would lose it).
     /// </summary>
     /// <param name="node">The node to select, or null to clear the selection.</param>
     [RelayCommand]
@@ -259,8 +301,10 @@ public partial class NodeListViewModel : ObservableObject
     {
         _runOnUiThread(() =>
         {
+            bool changed;
             lock (_nodesGate)
             {
+                changed = !ReferenceEquals(SelectedNode, node);
                 foreach (var candidate in _allNodes)
                 {
                     candidate.IsSelected = ReferenceEquals(candidate, node);
@@ -268,6 +312,13 @@ public partial class NodeListViewModel : ObservableObject
 
                 SelectedNode = node;
                 Settings.SelectedNodeId = node?.Id ?? "";
+            }
+
+            // The import event doubles as the "node state changed — persist"
+            // signal; raised only on an actual change.
+            if (changed)
+            {
+                NodesImported?.Invoke(this, EventArgs.Empty);
             }
         });
     }
@@ -361,7 +412,11 @@ public partial class NodeListViewModel : ObservableObject
             node.SourceSubscriptionId = entry.Id;
         }
 
-        AddImported(imported);
+        // The subscription ENTRY itself was upserted with a fresh LastUpdated
+        // above, so NodesImported must be raised even when zero new nodes
+        // arrived — otherwise an unchanged feed is re-fetched after every
+        // restart.
+        AddImported(imported, raiseWhenUnchanged: true);
     }
 
     /// <summary>
@@ -488,9 +543,12 @@ public partial class NodeListViewModel : ObservableObject
         }
 
         // ── UI-thread mutations ───────────────────────────────────────
-        if (added + removed > 0)
+        // NodesImported is raised even when the feed content did not change:
+        // entry.LastUpdated was refreshed above and must be persisted, or the
+        // unchanged feed is re-fetched after every restart.
+        _runOnUiThread(() =>
         {
-            _runOnUiThread(() =>
+            if (added + removed > 0)
             {
                 ApplyFilter();
 
@@ -500,10 +558,10 @@ public partial class NodeListViewModel : ObservableObject
                     SelectedNode = null;
                     Settings.SelectedNodeId = "";
                 }
+            }
 
-                NodesImported?.Invoke(this, EventArgs.Empty);
-            });
-        }
+            NodesImported?.Invoke(this, EventArgs.Empty);
+        });
 
         AppLogger.Info($"subscription updated url={entry.Url} added={added} removed={removed}");
         return string.Format(Loc.Get("Info.SubUpdated"), added, removed);
@@ -596,9 +654,12 @@ public partial class NodeListViewModel : ObservableObject
     /// <summary>
     /// Appends the not-yet-known nodes from <paramref name="imported"/> to the
     /// repository, refreshes the filtered projection, and raises
-    /// <see cref="NodesImported"/> when anything was actually added.
+    /// <see cref="NodesImported"/> when anything was actually added — or always,
+    /// when <paramref name="raiseWhenUnchanged"/> is set (used by subscription
+    /// imports, whose <see cref="SubscriptionEntry.LastUpdated"/> must be
+    /// persisted even when the feed brought no new nodes).
     /// </summary>
-    private string? AddImported(IEnumerable<ProxyNode> imported)
+    private string? AddImported(IEnumerable<ProxyNode> imported, bool raiseWhenUnchanged = false)
     {
         var added = 0;
         lock (_nodesGate)
@@ -620,33 +681,76 @@ public partial class NodeListViewModel : ObservableObject
             }
         }
 
+        if (added > 0 || raiseWhenUnchanged)
+        {
+            _runOnUiThread(() =>
+            {
+                ApplyFilter();
+                NodesImported?.Invoke(this, EventArgs.Empty);
+            });
+        }
+
         if (added == 0)
         {
             return null;
         }
 
-        _runOnUiThread(() =>
-        {
-            ApplyFilter();
-            NodesImported?.Invoke(this, EventArgs.Empty);
-        });
-
         return string.Format(Loc.Get("Info.ImportedNodes"), added);
     }
 
-    /// <summary>Replaces <see cref="Nodes"/> with the search-matching subset of the repository.</summary>
+    /// <summary>
+    /// Rebuilds <see cref="Nodes"/> to match the search-filtered repository.
+    /// The diff runs in place (remove / move / insert) so search keystrokes
+    /// preserve scroll position and ListView virtualization.
+    /// </summary>
     private void ApplyFilter()
     {
         lock (_nodesGate)
         {
             var query = SearchText?.Trim();
-            Nodes.Clear();
-            foreach (var node in _allNodes)
+            var target = string.IsNullOrEmpty(query)
+                ? _allNodes
+                : _allNodes.Where(node => Matches(node, query)).ToList();
+
+            // Remove visible items the filter no longer wants (back to front).
+            for (var i = Nodes.Count - 1; i >= 0; i--)
             {
-                if (string.IsNullOrEmpty(query) || Matches(node, query))
+                if (!target.Contains(Nodes[i]))
                 {
-                    Nodes.Add(node);
+                    Nodes.RemoveAt(i);
                 }
+            }
+
+            // Bring the survivors into the target order and insert the missing ones.
+            var position = 0;
+            foreach (var node in target)
+            {
+                if (position < Nodes.Count && ReferenceEquals(Nodes[position], node))
+                {
+                    position++;
+                    continue;
+                }
+
+                var existing = -1;
+                for (var i = position; i < Nodes.Count; i++)
+                {
+                    if (ReferenceEquals(Nodes[i], node))
+                    {
+                        existing = i;
+                        break;
+                    }
+                }
+
+                if (existing >= position)
+                {
+                    Nodes.Move(existing, position);
+                }
+                else
+                {
+                    Nodes.Insert(position, node);
+                }
+
+                position++;
             }
         }
     }

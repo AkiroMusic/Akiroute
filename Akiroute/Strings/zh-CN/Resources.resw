@@ -198,6 +198,24 @@
   <data name="SettingsTun.OffContent" xml:space="preserve">
     <value>关</value>
   </data>
+  <data name="SettingsStartMinimized.Header" xml:space="preserve">
+    <value>后台启动</value>
+  </data>
+  <data name="SettingsStartMinimized.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="SettingsStartMinimized.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="SettingsLaunchOnStartup.Header" xml:space="preserve">
+    <value>开机启动</value>
+  </data>
+  <data name="SettingsLaunchOnStartup.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="SettingsLaunchOnStartup.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
   <data name="SettingsAppearanceLabel.Text" xml:space="preserve">
     <value>外观与更新</value>
   </data>
@@ -380,6 +398,9 @@
   <data name="Dialog.BackupSuccessDetail" xml:space="preserve">
     <value>配置已导出到：{0}</value>
   </data>
+  <data name="Dialog.BackupPlaintextWarning" xml:space="preserve">
+    <value>⚠ 此文件以明文包含节点凭据（保持明文是为了在任何机器上都能恢复）。请妥善保管，不再需要时请及时删除。</value>
+  </data>
   <data name="Dialog.BackupFail" xml:space="preserve">
     <value>备份失败</value>
   </data>
@@ -393,13 +414,29 @@
     <value>恢复成功</value>
   </data>
   <data name="Dialog.RestoreSuccessDetail" xml:space="preserve">
-    <value>恢复成功，重启应用后生效</value>
+    <value>配置已恢复并生效</value>
   </data>
   <data name="Dialog.RestoreFailDetail" xml:space="preserve">
     <value>写入配置失败：{0}</value>
   </data>
   <data name="Dialog.Ok" xml:space="preserve">
     <value>确定</value>
+  </data>
+  <data name="Dialog.Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+
+  <!-- Plain-HTTP subscription confirmation -->
+  <data name="Dialog.HttpSubscribeTitle" xml:space="preserve">
+    <value>不安全的订阅地址</value>
+  </data>
+  <data name="Dialog.HttpSubscribeBody" xml:space="preserve">
+    <value>该订阅使用明文 HTTP，传输内容（包括节点凭据）可能被窃取或篡改。仍要继续吗？
+
+{0}</value>
+  </data>
+  <data name="Dialog.HttpSubscribeContinue" xml:space="preserve">
+    <value>仍要添加</value>
   </data>
 
   <!-- EditNodeDialog validation strings -->
@@ -424,6 +461,29 @@
   <!-- SettingsViewModel save error (for future use) -->
   <data name="Error.SaveFailed" xml:space="preserve">
     <value>保存失败: {0}</value>
+  </data>
+
+  <!-- Auto-start registry update failure -->
+  <data name="Error.LaunchOnStartupFailed" xml:space="preserve">
+    <value>更新开机自启注册表项失败，详情请查看应用日志。</value>
+  </data>
+
+  <!-- Inline port validation feedback -->
+  <data name="SettingsPortInvalid.Text" xml:space="preserve">
+    <value>端口无效，需 1024 - 65535</value>
+  </data>
+
+  <!-- Single-instance native message box -->
+  <data name="App.AlreadyRunning" xml:space="preserve">
+    <value>Akiroute 已在运行。</value>
+  </data>
+
+  <!-- Subscription row (per-item) strings -->
+  <data name="SubAutoUpdateBox.ToolTipService.ToolTip" xml:space="preserve">
+    <value>覆盖此订阅的全局自动更新间隔（0 = 跟随全局）</value>
+  </data>
+  <data name="SubRemoveBtn.AutomationProperties.Name" xml:space="preserve">
+    <value>删除订阅</value>
   </data>
 
   <!-- TrayIconService strings (for future use) -->

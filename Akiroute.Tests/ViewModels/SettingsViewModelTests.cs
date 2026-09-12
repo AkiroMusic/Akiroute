@@ -12,6 +12,42 @@ namespace Akiroute.Tests.ViewModels;
 public class SettingsViewModelTests
 {
     [Fact]
+    public void RefreshWrappersFromSettings_ReReadsInPlaceWithoutRegistryWrite()
+    {
+        // Arrange: a VM whose wrappers lag behind the shared settings (as after
+        // a config restore refills AppSettings in place). The launch-on-startup
+        // write is observable through the test seam.
+        var settings = new AppSettings { Port = 4444, StartMinimized = true, LaunchOnStartup = true };
+        var registryWrites = 0;
+        StartupHelper.RootKeyFactoryForTests = () =>
+        {
+            registryWrites++;
+            throw new InvalidOperationException("registry must not be touched during wrapper refresh");
+        };
+        try
+        {
+            var vm = NewViewModel(settings);
+
+            settings.Port = 5555;
+            settings.StartMinimized = false;
+            settings.LaunchOnStartup = false;
+
+            // Act.
+            vm.RefreshWrappersFromSettings();
+
+            // Assert: wrappers re-read from settings, no persistence triggered.
+            Assert.Equal(5555, vm.Port);
+            Assert.False(vm.StartMinimized);
+            Assert.False(vm.LaunchOnStartup);
+            Assert.Equal(0, registryWrites);
+        }
+        finally
+        {
+            StartupHelper.RootKeyFactoryForTests = null;
+        }
+    }
+
+    [Fact]
     public void Constructor_ReflectsCurrentSettings()
     {
         var settings = new AppSettings

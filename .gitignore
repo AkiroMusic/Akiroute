@@ -15,6 +15,7 @@ Akiroute/Assets/rules/
 
 # Internal dev tooling / state (not part of the deliverable)
 .omo/
+.zcode/
 Reference-XrayUI/
 Reference-HexagonProxy/
 Akiroute-Plan.md
