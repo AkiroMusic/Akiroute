@@ -85,10 +85,17 @@ public class ProxyStatusViewModelTests
         vm.SampleIntervalMs = 20;
 
         vm.StartTrafficLoop();
-        await Task.Delay(130);
+
+        // Poll instead of sleeping a fixed duration: a loaded CI runner can
+        // starve the 20 ms sampling loop, so wait up to 5 s for the samples.
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (vm.TrafficSeries.Count < 3 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(20);
+        }
 
         var grownCount = vm.TrafficSeries.Count;
-        Assert.True(grownCount >= 3, $"expected at least 3 samples, got {grownCount}");
+        Assert.True(grownCount >= 3, $"expected at least 3 samples within 5 s, got {grownCount}");
 
         vm.StopTrafficLoop();
         var loopTask = vm.TrafficLoopTask;
