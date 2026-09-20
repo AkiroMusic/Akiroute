@@ -233,8 +233,9 @@ risk and responsibility.
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue.svg)]()
 [![Framework](https://img.shields.io/badge/Framework-WinUI%203%20%2F%20.NET%2010-purple.svg)]()
 
-> **Windows 本地代理路由工具** —— 基于 WinUI 3 + xray-core 的原生桌面客户端，
-> 提供进程级分流、节点管理与实时流量监控。**仅供学习与交流使用。**
+> **Windows 本地代理路由工具** —— 从零构建于 `xray-core` 之上的原生 WinUI 3
+> 桌面客户端，拥有干净、Apple/Google 级别的界面，提供进程级分流、节点管理与
+> 实时流量监控。**仅供学习与交流使用。**
 
 ---
 
@@ -393,7 +394,7 @@ Proxifier：
 |---|---|
 | UI | WinUI 3（Windows App SDK 1.8，自包含） |
 | 语言 | C# / .NET 10（自包含发布；Native AOT 待支持，见路线图） |
-| 引擎 | xray-core |
+| 引擎 | [xray-core](https://github.com/XTLS/Xray-core) |
 | MVVM | CommunityToolkit.Mvvm 8.4 |
 | 配置解析 | YamlDotNet |
 
